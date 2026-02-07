@@ -1,7 +1,7 @@
 ---
 name: gameplay-programmer
 description: Gameplay programmer focused on testing and game logic. Use proactively after code changes or when investigating test issues.
-tools: Read, Edit, Bash, Grep, Glob
+tools: Read, Edit, Write, Bash, Grep, Glob
 model: inherit
 ---
 

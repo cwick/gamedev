@@ -1,6 +1,6 @@
+use crate::engine::GameState;
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
-use crate::engine::GameState;
 
 thread_local! {
     static GAME_STATE: RefCell<GameState> = const { RefCell::new(GameState::new()) };

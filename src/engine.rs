@@ -2,8 +2,9 @@ use rand::Rng;
 
 const PADDLE_SPEED: f32 = 300.0;
 const MAX_DT: f32 = 0.05;
-const STATE_FIELDS: usize = 8;
+const STATE_FIELDS: usize = 11;
 const AI_DEAD_ZONE: f32 = 10.0;
+const DEFAULT_WINNING_SCORE: u32 = 11;
 
 const INPUT_UP: u32 = 0b01;
 const INPUT_DOWN: u32 = 0b10;
@@ -13,6 +14,12 @@ const PADDLE_WIDTH: f32 = 10.0;
 const PADDLE_HEIGHT: f32 = 80.0;
 const PADDLE1_X: f32 = 20.0;
 const PADDLE2_X: f32 = 770.0;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum GamePhase {
+    Playing,
+    GameOver,
+}
 
 struct Ball {
     position_x: f32,
@@ -31,6 +38,10 @@ pub struct GameState {
     paddles: [Paddle; 2],
     field_width: f32,
     field_height: f32,
+    player_one_score: u32,
+    player_two_score: u32,
+    phase: GamePhase,
+    winning_score: u32,
     snapshot: [f32; STATE_FIELDS],
 }
 
@@ -44,11 +55,21 @@ impl GameState {
                 velocity_y: 0.0,
             },
             paddles: [
-                Paddle { position_y: 0.0, velocity_y: 0.0 },
-                Paddle { position_y: 0.0, velocity_y: 0.0 },
+                Paddle {
+                    position_y: 0.0,
+                    velocity_y: 0.0,
+                },
+                Paddle {
+                    position_y: 0.0,
+                    velocity_y: 0.0,
+                },
             ],
             field_width: 0.0,
             field_height: 0.0,
+            player_one_score: 0,
+            player_two_score: 0,
+            phase: GamePhase::Playing,
+            winning_score: DEFAULT_WINNING_SCORE,
             snapshot: [0.0; STATE_FIELDS],
         }
     }
@@ -56,6 +77,10 @@ impl GameState {
     pub fn init(&mut self, width: f32, height: f32) {
         self.field_width = width;
         self.field_height = height;
+        self.player_one_score = 0;
+        self.player_two_score = 0;
+        self.phase = GamePhase::Playing;
+        self.winning_score = DEFAULT_WINNING_SCORE;
         self.reset_ball();
         self.paddles[0].position_y = height / 2.0;
         self.paddles[0].velocity_y = 0.0;
@@ -75,6 +100,9 @@ impl GameState {
     }
 
     pub fn step(&mut self, dt_seconds: f32, p1_input: u32) {
+        if self.phase == GamePhase::GameOver {
+            return;
+        }
         let dt = dt_seconds.min(MAX_DT);
         let p2_input = self.compute_ai_input();
         self.apply_input(p1_input, p2_input);
@@ -114,7 +142,9 @@ impl GameState {
         let paddle_half_height = PADDLE_HEIGHT / 2.0;
         for paddle in &mut self.paddles {
             paddle.position_y += paddle.velocity_y * dt;
-            paddle.position_y = paddle.position_y.clamp(paddle_half_height, self.field_height - paddle_half_height);
+            paddle.position_y = paddle
+                .position_y
+                .clamp(paddle_half_height, self.field_height - paddle_half_height);
         }
     }
 
@@ -122,7 +152,12 @@ impl GameState {
         let paddle_positions = [PADDLE1_X, PADDLE2_X];
 
         for (i, &paddle_x) in paddle_positions.iter().enumerate() {
-            if Self::check_paddle_collision(self.ball.position_x, self.ball.position_y, paddle_x, self.paddles[i].position_y) {
+            if Self::check_paddle_collision(
+                self.ball.position_x,
+                self.ball.position_y,
+                paddle_x,
+                self.paddles[i].position_y,
+            ) {
                 if i == 0 {
                     self.ball.velocity_x = self.ball.velocity_x.abs();
                     self.ball.position_x = paddle_x + (PADDLE_WIDTH / 2.0) + BALL_RADIUS;
@@ -135,7 +170,17 @@ impl GameState {
     }
 
     fn collide_walls(&mut self) {
-        if self.ball.position_x <= 0.0 || self.ball.position_x >= self.field_width {
+        if self.ball.position_x <= 0.0 {
+            self.player_two_score += 1;
+            if self.player_two_score >= self.winning_score {
+                self.phase = GamePhase::GameOver;
+            }
+            self.reset_ball();
+        } else if self.ball.position_x >= self.field_width {
+            self.player_one_score += 1;
+            if self.player_one_score >= self.winning_score {
+                self.phase = GamePhase::GameOver;
+            }
             self.reset_ball();
         }
 
@@ -145,23 +190,12 @@ impl GameState {
         }
     }
 
-    fn check_paddle_collision(
-        ball_x: f32,
-        ball_y: f32,
-        paddle_x: f32,
-        paddle_y: f32,
-    ) -> bool {
+    fn check_paddle_collision(ball_x: f32, ball_y: f32, paddle_x: f32, paddle_y: f32) -> bool {
         let paddle_half_h = PADDLE_HEIGHT / 2.0;
         let paddle_half_w = PADDLE_WIDTH / 2.0;
 
-        let closest_x = ball_x.clamp(
-            paddle_x - paddle_half_w,
-            paddle_x + paddle_half_w
-        );
-        let closest_y = ball_y.clamp(
-            paddle_y - paddle_half_h,
-            paddle_y + paddle_half_h
-        );
+        let closest_x = ball_x.clamp(paddle_x - paddle_half_w, paddle_x + paddle_half_w);
+        let closest_y = ball_y.clamp(paddle_y - paddle_half_h, paddle_y + paddle_half_h);
 
         let dist_x = ball_x - closest_x;
         let dist_y = ball_y - closest_y;
@@ -177,8 +211,14 @@ impl GameState {
         self.snapshot[3] = self.ball.velocity_y;
         self.snapshot[4] = self.paddles[0].position_y;
         self.snapshot[5] = self.paddles[1].position_y;
-        self.snapshot[6] = self.field_width;
-        self.snapshot[7] = self.field_height;
+        self.snapshot[6] = self.player_one_score as f32;
+        self.snapshot[7] = self.player_two_score as f32;
+        self.snapshot[8] = self.field_width;
+        self.snapshot[9] = self.field_height;
+        self.snapshot[10] = match self.phase {
+            GamePhase::Playing => 0.0,
+            GamePhase::GameOver => 1.0,
+        };
     }
 
     pub fn snapshot_ptr(&self) -> *const f32 {
@@ -191,102 +231,4 @@ impl GameState {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    const DT: f32 = 1.0 / 60.0;
-    const FIELD_WIDTH: f32 = 800.0;
-    const FIELD_HEIGHT: f32 = 600.0;
-
-    #[test]
-    fn ball_bounces_off_top_wall() {
-        let mut game = GameState::new();
-        game.field_width = FIELD_WIDTH;
-        game.field_height = FIELD_HEIGHT;
-        game.ball.position_x = FIELD_WIDTH / 2.0;
-        game.ball.position_y = 5.0;
-        game.ball.velocity_x = 0.0;
-        game.ball.velocity_y = -300.0;
-
-        let velocity_before = game.ball.velocity_y;
-        game.step(DT, 0);
-
-        assert!(game.ball.velocity_y > 0.0, "ball should bounce down after hitting top wall");
-        assert_eq!(game.ball.velocity_y, -velocity_before, "ball should reverse vertical direction");
-    }
-
-    #[test]
-    fn ball_bounces_off_bottom_wall() {
-        let mut game = GameState::new();
-        game.field_width = FIELD_WIDTH;
-        game.field_height = FIELD_HEIGHT;
-        game.ball.position_x = FIELD_WIDTH / 2.0;
-        game.ball.position_y = FIELD_HEIGHT - 5.0;
-        game.ball.velocity_x = 0.0;
-        game.ball.velocity_y = 300.0;
-
-        let velocity_before = game.ball.velocity_y;
-        game.step(DT, 0);
-
-        assert!(game.ball.velocity_y < 0.0, "ball should bounce up after hitting bottom wall");
-        assert_eq!(game.ball.velocity_y, -velocity_before, "ball should reverse vertical direction");
-    }
-
-    #[test]
-    fn ball_bounces_off_left_paddle() {
-        let mut game = GameState::new();
-        game.field_width = FIELD_WIDTH;
-        game.field_height = FIELD_HEIGHT;
-        game.ball.position_x = PADDLE1_X + PADDLE_WIDTH / 2.0 + BALL_RADIUS + 2.0;
-        game.ball.position_y = FIELD_HEIGHT / 2.0;
-        game.ball.velocity_x = -200.0;
-        game.ball.velocity_y = 0.0;
-        game.paddles[0].position_y = FIELD_HEIGHT / 2.0;
-
-        game.step(DT, 0);
-
-        assert!(game.ball.velocity_x > 0.0, "ball should bounce right after hitting left paddle");
-    }
-
-    #[test]
-    fn ball_bounces_off_right_paddle() {
-        let mut game = GameState::new();
-        game.field_width = FIELD_WIDTH;
-        game.field_height = FIELD_HEIGHT;
-        game.ball.position_x = PADDLE2_X - PADDLE_WIDTH / 2.0 - BALL_RADIUS - 2.0;
-        game.ball.position_y = FIELD_HEIGHT / 2.0;
-        game.ball.velocity_x = 200.0;
-        game.ball.velocity_y = 0.0;
-        game.paddles[1].position_y = FIELD_HEIGHT / 2.0;
-
-        game.step(DT, 0);
-
-        assert!(game.ball.velocity_x < 0.0, "ball should bounce left after hitting right paddle");
-    }
-
-    #[test]
-    fn paddle_cannot_move_above_top_edge() {
-        let mut game = GameState::new();
-        game.field_width = FIELD_WIDTH;
-        game.field_height = FIELD_HEIGHT;
-        game.paddles[0].position_y = PADDLE_HEIGHT / 2.0 + 10.0;
-
-        game.step(DT, INPUT_UP);
-
-        assert!(game.paddles[0].position_y >= PADDLE_HEIGHT / 2.0,
-                "paddle should not move above top edge");
-    }
-
-    #[test]
-    fn paddle_cannot_move_below_bottom_edge() {
-        let mut game = GameState::new();
-        game.field_width = FIELD_WIDTH;
-        game.field_height = FIELD_HEIGHT;
-        game.paddles[0].position_y = FIELD_HEIGHT - PADDLE_HEIGHT / 2.0 - 10.0;
-
-        game.step(DT, INPUT_DOWN);
-
-        assert!(game.paddles[0].position_y <= FIELD_HEIGHT - PADDLE_HEIGHT / 2.0,
-                "paddle should not move below bottom edge");
-    }
-}
+mod tests;

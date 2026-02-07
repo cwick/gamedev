@@ -69,7 +69,8 @@
 
         <div id="output"></div>
 
-        <canvas id="gameCanvas" width="800" height="600" style="border: 1px solid #666; margin-top: 20px; display: block; max-width: 100%; background: #000;"></canvas>
+        <canvas id="gameCanvas" width="800" height="600"
+            style="border: 1px solid #666; margin-top: 20px; display: block; max-width: 100%; background: #000;"></canvas>
     </div>
 
     <script type="module">
@@ -78,6 +79,7 @@
         let lastTime = 0;
         let lastDisplayUpdate = 0;
         let wasmModule;
+        let currentGamePhase = 0.0;
 
         const keys = {
             p1_up: false,
@@ -91,6 +93,10 @@
             }
             if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
                 keys.p1_down = true;
+                e.preventDefault();
+            }
+            if (e.key === ' ' && currentGamePhase === 1.0) {
+                engine_init(800, 600);
                 e.preventDefault();
             }
         });
@@ -129,7 +135,9 @@
                     const statePtr = game_state_ptr();
                     const stateLen = game_state_len();
                     const state = new Float32Array(wasmModule.memory.buffer, statePtr, stateLen);
-                    const [ball_x, ball_y, ball_vx, ball_vy, paddle1_y, paddle2_y] = state;
+                    const [ball_x, ball_y, ball_vx, ball_vy, paddle1_y, paddle2_y,
+                        p1_score, p2_score, _field_w, _field_h, game_phase] = state;
+                    currentGamePhase = game_phase;
 
                     ctx.fillStyle = '#000000';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -156,14 +164,23 @@
 
                     ctx.font = '48px monospace';
                     ctx.textAlign = 'center';
-                    ctx.fillText('0', canvas.width / 4, 60);
-                    ctx.fillText('0', (canvas.width * 3) / 4, 60);
+                    ctx.fillText(String(p1_score), canvas.width / 4, 60);
+                    ctx.fillText(String(p2_score), (canvas.width * 3) / 4, 60);
+
+                    if (game_phase === 1.0) {
+                        const winner = p1_score > p2_score ? 'PLAYER 1' : 'PLAYER 2';
+                        ctx.font = '36px monospace';
+                        ctx.fillText(winner + ' WINS', canvas.width / 2, canvas.height / 2);
+                        ctx.font = '20px monospace';
+                        ctx.fillText('PRESS SPACE TO RESTART', canvas.width / 2, canvas.height / 2 + 40);
+                    }
 
                     if (currentTimeSec - lastDisplayUpdate >= 0.1) {
                         document.getElementById('output').innerHTML =
                             `<p><strong>Game Running</strong></p>
                              <p>Ball position: (${ball_x.toFixed(1)}, ${ball_y.toFixed(1)})</p>
                              <p>Paddle 1 Y: ${paddle1_y.toFixed(1)} | Paddle 2 Y: ${paddle2_y.toFixed(1)}</p>
+                             <p>Score: P1=${p1_score} | P2=${p2_score} | Phase=${game_phase} | Len=${stateLen}</p>
                              <p>Controls: W/ArrowUp (up) | S/ArrowDown (down)</p>`;
 
                         lastDisplayUpdate = currentTimeSec;
