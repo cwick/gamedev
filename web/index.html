@@ -73,10 +73,11 @@
     </div>
 
     <script type="module">
-        import init, { engine_init, engine_step, game_get_state } from './dist/gamedev_wasm_hello.js';
+        import init, { engine_init, engine_step, game_state_ptr, game_state_len } from './dist/gamedev_wasm_hello.js';
 
         let lastTime = 0;
         let lastDisplayUpdate = 0;
+        let wasmModule;
 
         const keys = {
             p1_up: false,
@@ -105,7 +106,7 @@
 
         async function run() {
             try {
-                await init();
+                wasmModule = await init();
 
                 document.getElementById('status').textContent = '✅ WebAssembly loaded successfully!';
                 document.getElementById('status').style.color = 'green';
@@ -125,7 +126,9 @@
                         engine_step(deltaTime, input_bits);
                     }
 
-                    const state = game_get_state();
+                    const statePtr = game_state_ptr();
+                    const stateLen = game_state_len();
+                    const state = new Float32Array(wasmModule.memory.buffer, statePtr, stateLen);
                     const [ball_x, ball_y, ball_vx, ball_vy, paddle1_y, paddle2_y] = state;
 
                     ctx.fillStyle = '#f5f5f5';
