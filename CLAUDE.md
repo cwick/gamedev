@@ -20,7 +20,7 @@ Browser (web/index.html)
 ```
 
 ### Key Principle
-**Rust exports only** - This project focuses on exporting Rust functions to JavaScript. We do NOT import browser APIs into Rust (no web-sys). Any DOM manipulation or browser interaction happens on the JavaScript side.
+**Strictly one-way dependency: JS → Rust** - JavaScript calls Rust functions, never the reverse. Rust code does NOT call into JavaScript (no `extern "C"` blocks, no console.log imports, nothing). This keeps the architecture simple and the dependency direction clear.
 
 ## Project Structure
 
@@ -49,8 +49,9 @@ c:\Users\carme\dev\gamedev\
 
 ### [src/lib.rs](src/lib.rs)
 - **Pattern:** Export public functions with `#[wasm_bindgen]` attribute
-- **Imports:** Can import JS functions via `extern "C"` blocks (e.g., console.log)
+- **No imports:** Do NOT import JS functions via `extern "C"` blocks
 - **No web-sys:** Do not add web-sys or call browser APIs directly from Rust
+- **Strictly exports only:** Rust only exports functions, never calls into JavaScript
 
 ### [web/index.html](web/index.html)
 - **Module script:** Uses `<script type="module">` for ES module imports
@@ -138,29 +139,6 @@ Default (no flag) uses release mode.
    // Use it:
    const result = my_function("test");
    ```
-
-### Importing JavaScript Functions into Rust
-
-If you need to call JS functions from Rust:
-
-```rust
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-
-    // For window.alert:
-    fn alert(s: &str);
-}
-
-#[wasm_bindgen]
-pub fn my_function() {
-    log("Hello from Rust!");
-    alert("Alert from Rust!");
-}
-```
-
-**Do NOT** add web-sys dependency for this - only import what you need via `extern "C"`.
 
 ### Supported Types for WASM Export
 
@@ -308,9 +286,8 @@ cargo install miniserve
 
 As of initial setup, these functions are available:
 
-1. **`hello_console()`** - Logs message to browser console
-2. **`hello_string()`** - Returns greeting string
-3. **`greet(name: &str)`** - Returns personalized greeting
+1. **`hello_string()`** - Returns greeting string
+2. **`greet(name: &str)`** - Returns personalized greeting
 
 ### When Adding Dependencies
 
@@ -370,13 +347,11 @@ ls web/dist/
 | Project config | `Cargo.toml` |
 | Git config | `.gitignore` |
 
-### URLs
+### URL
 
 | Purpose | URL |
 |---------|-----|
 | Local server | http://localhost:8080 |
-| Network access | http://127.0.0.1:8080 |
-| LAN access | http://192.168.50.227:8080 |
 
 ## Additional Resources
 

@@ -61,16 +61,14 @@
 
         <h2>Try These Examples:</h2>
 
-        <button id="btn-console">1. Log to Console</button>
-        <button id="btn-string">2. Return String</button>
-        <button id="btn-greet">3. Greet with Name</button>
+        <button id="btn-string">1. Return String</button>
+        <button id="btn-greet">2. Greet with Name</button>
 
         <div id="output"></div>
     </div>
 
     <script type="module">
         import init, {
-            hello_console,
             hello_string,
             greet
         } from './dist/gamedev_wasm_hello.js';
@@ -81,12 +79,6 @@
 
                 document.getElementById('status').textContent = '✅ WebAssembly loaded successfully!';
                 document.getElementById('status').style.color = 'green';
-
-                document.getElementById('btn-console').addEventListener('click', () => {
-                    hello_console();
-                    document.getElementById('output').innerHTML =
-                        '<p>✅ Check the browser console (F12) to see the message!</p>';
-                });
 
                 document.getElementById('btn-string').addEventListener('click', () => {
                     const message = hello_string();
