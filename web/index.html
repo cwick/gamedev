@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rust WebAssembly Hello World</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 10px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #0066cc;
+            min-height: 50px;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦀 Rust WebAssembly Hello World</h1>
+
+        <div class="info">
+            <strong>Status:</strong> <span id="status">Loading WebAssembly module...</span>
+        </div>
+
+        <h2>Try These Examples:</h2>
+
+        <button id="btn-console">1. Log to Console</button>
+        <button id="btn-string">2. Return String</button>
+        <button id="btn-greet">3. Greet with Name</button>
+
+        <div id="output"></div>
+    </div>
+
+    <script type="module">
+        import init, {
+            hello_console,
+            hello_string,
+            greet
+        } from './dist/gamedev_wasm_hello.js';
+
+        async function run() {
+            try {
+                await init();
+
+                document.getElementById('status').textContent = '✅ WebAssembly loaded successfully!';
+                document.getElementById('status').style.color = 'green';
+
+                document.getElementById('btn-console').addEventListener('click', () => {
+                    hello_console();
+                    document.getElementById('output').innerHTML =
+                        '<p>✅ Check the browser console (F12) to see the message!</p>';
+                });
+
+                document.getElementById('btn-string').addEventListener('click', () => {
+                    const message = hello_string();
+                    document.getElementById('output').innerHTML =
+                        `<p><strong>Rust returned:</strong> "${message}"</p>`;
+                });
+
+                document.getElementById('btn-greet').addEventListener('click', () => {
+                    const name = prompt('Enter your name:') || 'Anonymous';
+                    const message = greet(name);
+                    document.getElementById('output').innerHTML =
+                        `<p><strong>${message}</strong></p>`;
+                });
+
+            } catch (err) {
+                document.getElementById('status').textContent =
+                    `❌ Error loading WebAssembly: ${err}`;
+                document.getElementById('status').style.color = 'red';
+                console.error('Error initializing WASM:', err);
+            }
+        }
+
+        run();
+    </script>
+</body>
+</html>
