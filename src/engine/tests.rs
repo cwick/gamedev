@@ -220,6 +220,100 @@ fn init_resets_scores_and_phase() {
 }
 
 #[test]
+fn ball_bounces_upward_off_paddle_top_edge() {
+    let mut game = GameState::new();
+    game.field_width = FIELD_WIDTH;
+    game.field_height = FIELD_HEIGHT;
+
+    let paddle_y = FIELD_HEIGHT / 2.0;
+    let paddle_top = paddle_y - PADDLE_HEIGHT / 2.0;
+    game.paddles[0].position_y = paddle_y;
+
+    game.ball.position_x = PADDLE1_X;
+    game.ball.position_y = paddle_top - BALL_RADIUS - 1.0;
+    game.ball.velocity_x = 0.0;
+    game.ball.velocity_y = 200.0;
+
+    game.step(DT, 0);
+
+    assert!(
+        game.ball.velocity_y < 0.0,
+        "expected ball to bounce upward (negative velocity_y), got {}",
+        game.ball.velocity_y
+    );
+    assert_eq!(
+        game.ball.velocity_y, -200.0,
+        "expected velocity_y to reflect to -200"
+    );
+}
+
+#[test]
+fn ball_bounces_downward_off_paddle_bottom_edge() {
+    let mut game = GameState::new();
+    game.field_width = FIELD_WIDTH;
+    game.field_height = FIELD_HEIGHT;
+
+    let paddle_y = FIELD_HEIGHT / 2.0;
+    let paddle_bottom = paddle_y + PADDLE_HEIGHT / 2.0;
+    game.paddles[0].position_y = paddle_y;
+
+    game.ball.position_x = PADDLE1_X;
+    game.ball.position_y = paddle_bottom + BALL_RADIUS + 1.0;
+    game.ball.velocity_x = 0.0;
+    game.ball.velocity_y = -200.0;
+
+    game.step(DT, 0);
+
+    assert!(
+        game.ball.velocity_y > 0.0,
+        "expected ball to bounce downward (positive velocity_y), got {}",
+        game.ball.velocity_y
+    );
+    assert_eq!(
+        game.ball.velocity_y, 200.0,
+        "expected velocity_y to reflect to 200"
+    );
+}
+
+#[test]
+fn ball_diagonal_hit_on_paddle_corner_resolves_in_one_frame() {
+    let mut game = GameState::new();
+    game.field_width = FIELD_WIDTH;
+    game.field_height = FIELD_HEIGHT;
+
+    let paddle_y = FIELD_HEIGHT / 2.0;
+    let paddle_top = paddle_y - PADDLE_HEIGHT / 2.0;
+    let paddle_right = PADDLE1_X + PADDLE_WIDTH / 2.0;
+    game.paddles[0].position_y = paddle_y;
+
+    game.ball.position_x = 26.0;
+    game.ball.position_y = paddle_top - BALL_RADIUS - 0.5;
+    game.ball.velocity_x = -200.0;
+    game.ball.velocity_y = 200.0;
+
+    game.step(DT, 0);
+
+    assert_eq!(
+        game.ball.velocity_y, -200.0,
+        "velocity_y should be reflected on edge hit"
+    );
+    assert_eq!(
+        game.ball.velocity_x, -200.0,
+        "velocity_x should be unchanged on edge hit"
+    );
+    assert!(
+        game.ball.position_x >= paddle_right + BALL_RADIUS,
+        "ball should be pushed outside paddle X extent, got {}",
+        game.ball.position_x
+    );
+    assert!(
+        game.ball.position_y <= paddle_top - BALL_RADIUS,
+        "ball should be above paddle top edge, got {}",
+        game.ball.position_y
+    );
+}
+
+#[test]
 fn scores_appear_in_snapshot() {
     let mut game = GameState::new();
     game.field_width = FIELD_WIDTH;

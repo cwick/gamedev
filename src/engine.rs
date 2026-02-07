@@ -90,7 +90,12 @@ impl GameState {
 
     fn reset_ball(&mut self) {
         let mut rng = rand::thread_rng();
-        let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+        let half_cone = std::f32::consts::FRAC_PI_4;
+        let angle = if rng.gen_bool(0.5) {
+            rng.gen_range(-half_cone..half_cone)
+        } else {
+            std::f32::consts::PI + rng.gen_range(-half_cone..half_cone)
+        };
         let speed = rng.gen_range(350.0..500.0);
 
         self.ball.position_x = self.field_width / 2.0;
@@ -152,18 +157,45 @@ impl GameState {
         let paddle_positions = [PADDLE1_X, PADDLE2_X];
 
         for (i, &paddle_x) in paddle_positions.iter().enumerate() {
-            if Self::check_paddle_collision(
+            if !Self::check_paddle_collision(
                 self.ball.position_x,
                 self.ball.position_y,
                 paddle_x,
                 self.paddles[i].position_y,
             ) {
+                continue;
+            }
+
+            let paddle_half_h = PADDLE_HEIGHT / 2.0;
+            let paddle_top = self.paddles[i].position_y - paddle_half_h;
+            let paddle_bottom = self.paddles[i].position_y + paddle_half_h;
+            let face_hit =
+                self.ball.position_y >= paddle_top && self.ball.position_y <= paddle_bottom;
+
+            if face_hit {
                 if i == 0 {
                     self.ball.velocity_x = self.ball.velocity_x.abs();
                     self.ball.position_x = paddle_x + (PADDLE_WIDTH / 2.0) + BALL_RADIUS;
                 } else {
                     self.ball.velocity_x = -self.ball.velocity_x.abs();
                     self.ball.position_x = paddle_x - (PADDLE_WIDTH / 2.0) - BALL_RADIUS;
+                }
+            } else {
+                self.ball.velocity_y = -self.ball.velocity_y;
+                if self.ball.position_y < paddle_top {
+                    self.ball.position_y = paddle_top - BALL_RADIUS;
+                } else {
+                    self.ball.position_y = paddle_bottom + BALL_RADIUS;
+                }
+                let paddle_half_w = PADDLE_WIDTH / 2.0;
+                let inside_x = self.ball.position_x > paddle_x - paddle_half_w
+                    && self.ball.position_x < paddle_x + paddle_half_w;
+                if inside_x {
+                    if i == 0 {
+                        self.ball.position_x = paddle_x + paddle_half_w + BALL_RADIUS;
+                    } else {
+                        self.ball.position_x = paddle_x - paddle_half_w - BALL_RADIUS;
+                    }
                 }
             }
         }
