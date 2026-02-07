@@ -2,6 +2,9 @@ use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
 use rand::Rng;
 
+const PADDLE_SPEED: f32 = 300.0;
+const MAX_DT: f32 = 0.05;
+
 struct GameState {
     ball_x: f32,
     ball_y: f32,
@@ -52,12 +55,23 @@ pub fn engine_init(width: f32, height: f32) {
 }
 
 #[wasm_bindgen]
-pub fn engine_step(dt_seconds: f32) {
+pub fn engine_step(dt_seconds: f32, input_bits: u32) {
     GAME_STATE.with(|state| {
         let mut state = state.borrow_mut();
 
-        state.ball_x += state.ball_vx * dt_seconds;
-        state.ball_y += state.ball_vy * dt_seconds;
+        let dt = dt_seconds.min(MAX_DT);
+
+        let p1_up = (input_bits & 0b01) != 0;
+        let p1_down = (input_bits & 0b10) != 0;
+
+        let dir = (p1_down as i32) - (p1_up as i32);
+        state.paddle1_y += dir as f32 * PADDLE_SPEED * dt;
+
+        let paddle_half_h = 40.0;
+        state.paddle1_y = state.paddle1_y.clamp(paddle_half_h, state.field_h - paddle_half_h);
+
+        state.ball_x += state.ball_vx * dt;
+        state.ball_y += state.ball_vy * dt;
 
         if state.ball_x <= 0.0 || state.ball_x >= state.field_w {
             state.ball_vx = -state.ball_vx;

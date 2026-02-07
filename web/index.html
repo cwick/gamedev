@@ -78,6 +78,31 @@
         let lastTime = 0;
         let lastDisplayUpdate = 0;
 
+        const keys = {
+            p1_up: false,
+            p1_down: false
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+                keys.p1_up = true;
+                e.preventDefault();
+            }
+            if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
+                keys.p1_down = true;
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+                keys.p1_up = false;
+            }
+            if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
+                keys.p1_down = false;
+            }
+        });
+
         async function run() {
             try {
                 await init();
@@ -96,7 +121,8 @@
                     lastTime = currentTimeSec;
 
                     if (deltaTime > 0) {
-                        engine_step(deltaTime);
+                        const input_bits = (keys.p1_up ? 0b01 : 0) | (keys.p1_down ? 0b10 : 0);
+                        engine_step(deltaTime, input_bits);
                     }
 
                     const state = game_get_state();
@@ -121,7 +147,8 @@
                         document.getElementById('output').innerHTML =
                             `<p><strong>Game Running</strong></p>
                              <p>Ball position: (${ball_x.toFixed(1)}, ${ball_y.toFixed(1)})</p>
-                             <p>Paddle 1 Y: ${paddle1_y.toFixed(1)} | Paddle 2 Y: ${paddle2_y.toFixed(1)}</p>`;
+                             <p>Paddle 1 Y: ${paddle1_y.toFixed(1)} | Paddle 2 Y: ${paddle2_y.toFixed(1)}</p>
+                             <p>Controls: W/ArrowUp (up) | S/ArrowDown (down)</p>`;
 
                         lastDisplayUpdate = currentTimeSec;
                     }
