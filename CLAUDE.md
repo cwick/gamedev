@@ -46,6 +46,7 @@ c:\Users\carme\dev\gamedev\
 - **Must have:** `crate-type = ["cdylib", "rlib"]` for WASM compilation
 - **Only dependency:** `wasm-bindgen = "0.2"`
 - **Profile:** `opt-level = "s"` for smaller binaries
+- **IMPORTANT:** Do NOT add external dependencies unless absolutely necessary. This project intentionally minimizes dependencies to keep the WASM binary small and the build simple.
 
 ### [src/lib.rs](src/lib.rs)
 - **Pattern:** Export public functions with `#[wasm_bindgen]` attribute
@@ -57,6 +58,40 @@ c:\Users\carme\dev\gamedev\
 - **Module script:** Uses `<script type="module">` for ES module imports
 - **WASM loading:** `import init, { functions } from './dist/gamedev_wasm_hello.js'`
 - **Initialization:** Must call `await init()` before using Rust functions
+
+## Code Style Guide
+
+### General Principles
+
+**Comments:**
+- Avoid comments unless absolutely necessary to clarify non-obvious logic
+- Code should be self-documenting through clear naming and structure
+- If you need a comment to explain *what* code does, consider refactoring for clarity
+- Comments explaining *why* (design decisions, workarounds) are acceptable
+
+**Rust Code Quality:**
+- All code must pass `cargo clippy` (Rust's linter) without warnings
+- Run `cargo clippy` before committing to catch common mistakes and anti-patterns
+- Address clippy suggestions - they improve code safety and idiomatic style
+- Use `cargo fmt` to auto-format code to Rust standards
+
+**Example of clear code without comments:**
+```rust
+// Bad: Needs comments to explain
+#[wasm_bindgen]
+pub fn process(x: f32) -> f32 {
+    // Multiply by delta and add offset
+    x * 0.016 + 1.0
+}
+
+// Good: Self-explanatory
+#[wasm_bindgen]
+pub fn apply_frame_time_adjustment(raw_value: f32) -> f32 {
+    const FRAME_TIME_60FPS: f32 = 0.016;
+    const BASE_OFFSET: f32 = 1.0;
+    raw_value * FRAME_TIME_60FPS + BASE_OFFSET
+}
+```
 
 ## Development Workflow
 

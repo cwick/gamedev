@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,17 +13,20 @@
             padding: 20px;
             background: #f5f5f5;
         }
+
         .container {
             background: white;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+
         h1 {
             color: #333;
             border-bottom: 3px solid #0066cc;
             padding-bottom: 10px;
         }
+
         button {
             background: #0066cc;
             color: white;
@@ -33,9 +37,11 @@
             cursor: pointer;
             font-size: 14px;
         }
+
         button:hover {
             background: #0052a3;
         }
+
         #output {
             margin-top: 20px;
             padding: 15px;
@@ -43,6 +49,7 @@
             border-left: 4px solid #0066cc;
             min-height: 50px;
         }
+
         .info {
             background: #e7f3ff;
             padding: 15px;
@@ -51,6 +58,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>🦀 Rust WebAssembly Hello World</h1>
@@ -58,11 +66,6 @@
         <div class="info">
             <strong>Status:</strong> <span id="status">Loading WebAssembly module...</span>
         </div>
-
-        <h2>Try These Examples:</h2>
-
-        <button id="btn-string">1. Return String</button>
-        <button id="btn-greet">2. Greet with Name</button>
 
         <h2>Game Loop Demo:</h2>
 
@@ -74,13 +77,9 @@
 
     <script type="module">
         import init, {
-            hello_string,
-            greet,
             game_init,
             game_update,
-            game_get_frame_count,
-            game_get_elapsed_time,
-            game_is_running,
+            game_get_state,
             game_start,
             game_stop
         } from './dist/gamedev_wasm_hello.js';
@@ -98,20 +97,6 @@
                 // Initialize game state
                 game_init();
 
-                // Original examples
-                document.getElementById('btn-string').addEventListener('click', () => {
-                    const message = hello_string();
-                    document.getElementById('output').innerHTML =
-                        `<p><strong>Rust returned:</strong> "${message}"</p>`;
-                });
-
-                document.getElementById('btn-greet').addEventListener('click', () => {
-                    const name = prompt('Enter your name:') || 'Anonymous';
-                    const message = greet(name);
-                    document.getElementById('output').innerHTML =
-                        `<p><strong>${message}</strong></p>`;
-                });
-
                 // Game loop
                 function gameLoop(currentTime) {
                     // Convert to seconds
@@ -124,21 +109,20 @@
                     // Call Rust update
                     game_update(deltaTime);
 
-                    // Get state from Rust
-                    const frameCount = game_get_frame_count();
-                    const elapsedTime = game_get_elapsed_time();
+                    // Get state from Rust (single call returns array: [elapsed_time, frame_count, is_running])
+                    const [elapsed_time, frame_count, is_running] = game_get_state();
 
                     // Log to console every 60 frames
-                    if (frameCount % 60 === 0) {
-                        console.log(`Frame: ${frameCount} | Elapsed: ${elapsedTime.toFixed(2)}s | FPS: ~${(frameCount / elapsedTime).toFixed(1)}`);
+                    if (frame_count % 60 === 0) {
+                        console.log(`Frame: ${frame_count} | Elapsed: ${elapsed_time.toFixed(2)}s | FPS: ~${(frame_count / elapsed_time).toFixed(1)}`);
                     }
 
                     // Update DOM
                     document.getElementById('output').innerHTML =
                         `<p><strong>Game Loop Running</strong></p>
-                         <p>Frame: ${frameCount}</p>
-                         <p>Elapsed: ${elapsedTime.toFixed(2)} seconds</p>
-                         <p>Average FPS: ${(frameCount / elapsedTime).toFixed(1)}</p>`;
+                         <p>Frame: ${frame_count}</p>
+                         <p>Elapsed: ${elapsed_time.toFixed(2)} seconds</p>
+                         <p>Average FPS: ${(frame_count / elapsed_time).toFixed(1)}</p>`;
 
                     // Continue loop
                     animationFrameId = requestAnimationFrame(gameLoop);
@@ -163,12 +147,11 @@
                         lastTime = 0;
                         console.log('Game loop stopped.');
 
-                        const frameCount = game_get_frame_count();
-                        const elapsedTime = game_get_elapsed_time();
+                        const [elapsed_time, frame_count] = game_get_state();
                         document.getElementById('output').innerHTML =
                             `<p><strong>Game Loop Stopped</strong></p>
-                             <p>Final Frame: ${frameCount}</p>
-                             <p>Total Time: ${elapsedTime.toFixed(2)} seconds</p>`;
+                             <p>Final Frame: ${frame_count}</p>
+                             <p>Total Time: ${elapsed_time.toFixed(2)} seconds</p>`;
                     }
                 });
 
@@ -183,4 +166,5 @@
         run();
     </script>
 </body>
+
 </html>

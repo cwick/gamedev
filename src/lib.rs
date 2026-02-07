@@ -1,20 +1,7 @@
-use wasm_bindgen::prelude::*;
 use std::cell::RefCell;
+use wasm_bindgen::prelude::*;
 
-// Example 1: Return a string to JavaScript
-#[wasm_bindgen]
-pub fn hello_string() -> String {
-    String::from("Hello from Rust WebAssembly! (returned string)")
-}
-
-// Example 2: Accept parameter and return personalized greeting
-#[wasm_bindgen]
-pub fn greet(name: &str) -> String {
-    format!("Hello, {}! Welcome to Rust WebAssembly.", name)
-}
-
-// Game Loop Infrastructure
-
+#[derive(Clone, Copy)]
 struct GameState {
     frame_count: u32,
     elapsed_time: f32,
@@ -22,11 +9,11 @@ struct GameState {
 }
 
 thread_local! {
-    static GAME_STATE: RefCell<GameState> = RefCell::new(GameState {
+    static GAME_STATE: RefCell<GameState> = const { RefCell::new(GameState {
         frame_count: 0,
         elapsed_time: 0.0,
         is_running: false,
-    });
+    }) };
 }
 
 #[wasm_bindgen]
@@ -54,18 +41,15 @@ pub fn game_update(delta_time: f32) {
 }
 
 #[wasm_bindgen]
-pub fn game_get_frame_count() -> u32 {
-    GAME_STATE.with(|state| state.borrow().frame_count)
-}
-
-#[wasm_bindgen]
-pub fn game_get_elapsed_time() -> f32 {
-    GAME_STATE.with(|state| state.borrow().elapsed_time)
-}
-
-#[wasm_bindgen]
-pub fn game_is_running() -> bool {
-    GAME_STATE.with(|state| state.borrow().is_running)
+pub fn game_get_state() -> Vec<f32> {
+    GAME_STATE.with(|state| {
+        let s = state.borrow();
+        vec![
+            s.elapsed_time,
+            s.frame_count as f32,
+            if s.is_running { 1.0 } else { 0.0 }
+        ]
+    })
 }
 
 #[wasm_bindgen]
