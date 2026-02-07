@@ -75,32 +75,6 @@ wasm-pack build --target web --out-dir web/dist
 
 **Note:** The server doesn't need to restart - it serves files as-is. Just rebuild and refresh.
 
-### Server Management
-
-**Check if server is running:**
-```bash
-netstat -ano | findstr :8080
-# OR
-tasklist | findstr miniserve
-```
-
-**Start server (if not running):**
-```bash
-cd web
-miniserve . --index index.html -p 8080
-```
-
-**Stop server:**
-```bash
-taskkill /F /IM miniserve.exe
-```
-
-**View server logs:**
-```bash
-# If running as background task (check task ID from context)
-cat C:\Users\carme\AppData\Local\Temp\claude\c--Users-carme-dev-gamedev\tasks\*.output
-```
-
 ### Build Options
 
 **Development build (faster, larger, with debug symbols):**
@@ -171,19 +145,6 @@ After making changes:
 - [ ] Check browser console (F12) for JavaScript errors
 - [ ] Test new/modified functions via UI or browser console
 
-### Browser Console Testing
-
-Open DevTools (F12) and test functions directly:
-
-```javascript
-// After page loads, WASM module is available globally
-const result = hello_string();
-console.log(result);
-
-const greeting = greet("Claude");
-console.log(greeting);
-```
-
 ### Common Error Messages
 
 **"Cannot find module './dist/gamedev_wasm_hello.js'"**
@@ -229,92 +190,6 @@ console.log(greeting);
 2. Only commit source files: `src/`, `web/index.html`, `Cargo.toml`, `.gitignore`
 3. Do NOT commit build artifacts
 
-## Troubleshooting
-
-### WASM Binary Not Loading
-
-**Symptoms:** Page loads but functions don't work, console shows "init is not a function"
-
-**Checks:**
-1. Verify files exist: `ls web/dist/`
-2. Check file size: `ls -lh web/dist/*.wasm` (should be 20-50 KB)
-3. View Network tab in DevTools: Confirm `.wasm` file loads (status 200)
-4. Check CORS: Must use HTTP server, not `file://` protocol
-
-### Changes Not Reflected in Browser
-
-**Symptoms:** Edited Rust code but browser shows old behavior
-
-**Solutions:**
-1. Rebuild: `wasm-pack build --target web --out-dir web/dist`
-2. Hard refresh: Ctrl+Shift+R (Chrome/Edge) or Ctrl+F5 (Firefox)
-3. Clear cache: Open DevTools → Network tab → Disable cache (while DevTools open)
-4. Verify timestamps: `ls -lt web/dist/` (check if files are recent)
-
-### Compilation Errors
-
-**If Rust doesn't compile:**
-1. Read error message carefully - Rust errors are descriptive
-2. Check syntax: Missing semicolons, wrong types, etc.
-3. Verify `#[wasm_bindgen]` is on the line immediately before function
-4. Ensure all exported functions are `pub`
-
-**Common issues:**
-- Forgot `pub` keyword on exported function
-- Used unsupported types (e.g., `Vec<String>` without proper serialization)
-- Syntax error (missing semicolon, brace, etc.)
-
-### Server Won't Start
-
-**Port already in use:**
-```bash
-# Find process using port 8080
-netstat -ano | findstr :8080
-
-# Kill it
-taskkill /F /PID <process_id>
-```
-
-**miniserve not found:**
-```bash
-cargo install miniserve
-```
-
-## Project-Specific Notes
-
-### Current Exported Functions
-
-As of initial setup, these functions are available:
-
-1. **`hello_string()`** - Returns greeting string
-2. **`greet(name: &str)`** - Returns personalized greeting
-
-### When Adding Dependencies
-
-**Think twice before adding dependencies:**
-- This is a minimal project - keep it simple
-- Avoid web-sys unless there's a strong reason
-- Each dependency increases WASM binary size
-
-**If you must add a dependency:**
-1. Add to `Cargo.toml` under `[dependencies]`
-2. Rebuild: `wasm-pack build --target web --out-dir web/dist`
-3. Check binary size: `ls -lh web/dist/*.wasm`
-4. Document the reason in commit message
-
-### Browser Compatibility
-
-**Tested on:** Chrome, Edge, Firefox (all modern versions)
-
-**Requirements:**
-- ES module support (all modern browsers)
-- WebAssembly support (all modern browsers)
-- LocalStorage/CORS: Must use HTTP server
-
-**Not supported:**
-- Internet Explorer (no WASM support)
-- Very old browsers (no ES modules)
-
 ## Quick Reference
 
 ### Essential Commands
@@ -322,15 +197,6 @@ As of initial setup, these functions are available:
 ```bash
 # Build WASM
 wasm-pack build --target web --out-dir web/dist
-
-# Start server
-cd web && miniserve . --index index.html -p 8080
-
-# Stop server
-taskkill /F /IM miniserve.exe
-
-# Check what's running on port 8080
-netstat -ano | findstr :8080
 
 # View generated files
 ls web/dist/
@@ -360,7 +226,3 @@ ls web/dist/
 - [wasm-pack Documentation](https://rustwasm.github.io/wasm-pack/)
 
 ---
-
-**Last Updated:** Initial project setup
-**Maintainer:** AI-assisted development
-**Project Status:** Active development

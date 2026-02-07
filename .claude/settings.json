@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh:*)",
+      "Bash(miniserve:*)",
+      "Bash(rustc:*)",
+      "Bash(cargo:*)",
+      "Bash(rustup:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(wasm-pack build:*)"
+    ]
+  }
+}

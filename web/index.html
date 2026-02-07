@@ -64,14 +64,29 @@
         <button id="btn-string">1. Return String</button>
         <button id="btn-greet">2. Greet with Name</button>
 
+        <h2>Game Loop Demo:</h2>
+
+        <button id="btn-start">Start Game Loop</button>
+        <button id="btn-stop">Stop Game Loop</button>
+
         <div id="output"></div>
     </div>
 
     <script type="module">
         import init, {
             hello_string,
-            greet
+            greet,
+            game_init,
+            game_update,
+            game_get_frame_count,
+            game_get_elapsed_time,
+            game_is_running,
+            game_start,
+            game_stop
         } from './dist/gamedev_wasm_hello.js';
+
+        let animationFrameId = null;
+        let lastTime = 0;
 
         async function run() {
             try {
@@ -80,6 +95,10 @@
                 document.getElementById('status').textContent = '✅ WebAssembly loaded successfully!';
                 document.getElementById('status').style.color = 'green';
 
+                // Initialize game state
+                game_init();
+
+                // Original examples
                 document.getElementById('btn-string').addEventListener('click', () => {
                     const message = hello_string();
                     document.getElementById('output').innerHTML =
@@ -91,6 +110,66 @@
                     const message = greet(name);
                     document.getElementById('output').innerHTML =
                         `<p><strong>${message}</strong></p>`;
+                });
+
+                // Game loop
+                function gameLoop(currentTime) {
+                    // Convert to seconds
+                    const currentTimeSec = currentTime / 1000.0;
+
+                    // Calculate delta time (first frame uses 0)
+                    const deltaTime = lastTime === 0 ? 0 : currentTimeSec - lastTime;
+                    lastTime = currentTimeSec;
+
+                    // Call Rust update
+                    game_update(deltaTime);
+
+                    // Get state from Rust
+                    const frameCount = game_get_frame_count();
+                    const elapsedTime = game_get_elapsed_time();
+
+                    // Log to console every 60 frames
+                    if (frameCount % 60 === 0) {
+                        console.log(`Frame: ${frameCount} | Elapsed: ${elapsedTime.toFixed(2)}s | FPS: ~${(frameCount / elapsedTime).toFixed(1)}`);
+                    }
+
+                    // Update DOM
+                    document.getElementById('output').innerHTML =
+                        `<p><strong>Game Loop Running</strong></p>
+                         <p>Frame: ${frameCount}</p>
+                         <p>Elapsed: ${elapsedTime.toFixed(2)} seconds</p>
+                         <p>Average FPS: ${(frameCount / elapsedTime).toFixed(1)}</p>`;
+
+                    // Continue loop
+                    animationFrameId = requestAnimationFrame(gameLoop);
+                }
+
+                // Start button
+                document.getElementById('btn-start').addEventListener('click', () => {
+                    if (animationFrameId === null) {
+                        game_start();
+                        lastTime = 0; // Reset timing
+                        animationFrameId = requestAnimationFrame(gameLoop);
+                        console.log('Game loop started!');
+                    }
+                });
+
+                // Stop button
+                document.getElementById('btn-stop').addEventListener('click', () => {
+                    if (animationFrameId !== null) {
+                        game_stop();
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                        lastTime = 0;
+                        console.log('Game loop stopped.');
+
+                        const frameCount = game_get_frame_count();
+                        const elapsedTime = game_get_elapsed_time();
+                        document.getElementById('output').innerHTML =
+                            `<p><strong>Game Loop Stopped</strong></p>
+                             <p>Final Frame: ${frameCount}</p>
+                             <p>Total Time: ${elapsedTime.toFixed(2)} seconds</p>`;
+                    }
                 });
 
             } catch (err) {
