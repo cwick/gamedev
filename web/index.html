@@ -69,7 +69,7 @@
 
         <div id="output"></div>
 
-        <canvas id="gameCanvas" width="800" height="600" style="border: 2px solid #333; margin-top: 20px; display: block; max-width: 100%;"></canvas>
+        <canvas id="gameCanvas" width="800" height="600" style="border: 1px solid #666; margin-top: 20px; display: block; max-width: 100%; background: #000;"></canvas>
     </div>
 
     <script type="module">
@@ -131,20 +131,33 @@
                     const state = new Float32Array(wasmModule.memory.buffer, statePtr, stateLen);
                     const [ball_x, ball_y, ball_vx, ball_vy, paddle1_y, paddle2_y] = state;
 
-                    ctx.fillStyle = '#f5f5f5';
+                    ctx.fillStyle = '#000000';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.lineWidth = 4;
+                    ctx.setLineDash([15, 15]);
+                    ctx.beginPath();
+                    ctx.moveTo(canvas.width / 2, 0);
+                    ctx.lineTo(canvas.width / 2, canvas.height);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
 
                     const paddleWidth = 10;
                     const paddleHeight = 80;
 
-                    ctx.fillStyle = '#0066cc';
+                    ctx.fillStyle = '#FFFFFF';
                     ctx.fillRect(20, paddle1_y - paddleHeight / 2, paddleWidth, paddleHeight);
                     ctx.fillRect(canvas.width - 30, paddle2_y - paddleHeight / 2, paddleWidth, paddleHeight);
 
-                    ctx.fillStyle = '#0066cc';
-                    ctx.beginPath();
-                    ctx.arc(ball_x, ball_y, 8, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.fillStyle = '#FFFFFF';
+                    const ballSize = 12;
+                    ctx.fillRect(ball_x - ballSize / 2, ball_y - ballSize / 2, ballSize, ballSize);
+
+                    ctx.font = '48px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('0', canvas.width / 4, 60);
+                    ctx.fillText('0', (canvas.width * 3) / 4, 60);
 
                     if (currentTimeSec - lastDisplayUpdate >= 0.1) {
                         document.getElementById('output').innerHTML =
