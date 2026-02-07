@@ -67,25 +67,16 @@
             <strong>Status:</strong> <span id="status">Loading WebAssembly module...</span>
         </div>
 
-        <h2>Game Loop Demo:</h2>
-
-        <button id="btn-start">Start Game Loop</button>
-        <button id="btn-stop">Stop Game Loop</button>
-
         <div id="output"></div>
+
+        <canvas id="gameCanvas" width="800" height="600" style="border: 2px solid #333; margin-top: 20px; display: block; max-width: 100%;"></canvas>
     </div>
 
     <script type="module">
-        import init, {
-            game_init,
-            game_update,
-            game_get_state,
-            game_start,
-            game_stop
-        } from './dist/gamedev_wasm_hello.js';
+        import init, { engine_init, engine_step, game_get_state } from './dist/gamedev_wasm_hello.js';
 
-        let animationFrameId = null;
         let lastTime = 0;
+        let lastDisplayUpdate = 0;
 
         async function run() {
             try {
@@ -94,66 +85,51 @@
                 document.getElementById('status').textContent = '✅ WebAssembly loaded successfully!';
                 document.getElementById('status').style.color = 'green';
 
-                // Initialize game state
-                game_init();
+                const canvas = document.getElementById('gameCanvas');
+                const ctx = canvas.getContext('2d');
 
-                // Game loop
+                engine_init(800, 600);
+
                 function gameLoop(currentTime) {
-                    // Convert to seconds
                     const currentTimeSec = currentTime / 1000.0;
-
-                    // Calculate delta time (first frame uses 0)
                     const deltaTime = lastTime === 0 ? 0 : currentTimeSec - lastTime;
                     lastTime = currentTimeSec;
 
-                    // Call Rust update
-                    game_update(deltaTime);
-
-                    // Get state from Rust (single call returns array: [elapsed_time, frame_count, is_running])
-                    const [elapsed_time, frame_count, is_running] = game_get_state();
-
-                    // Log to console every 60 frames
-                    if (frame_count % 60 === 0) {
-                        console.log(`Frame: ${frame_count} | Elapsed: ${elapsed_time.toFixed(2)}s | FPS: ~${(frame_count / elapsed_time).toFixed(1)}`);
+                    if (deltaTime > 0) {
+                        engine_step(deltaTime);
                     }
 
-                    // Update DOM
-                    document.getElementById('output').innerHTML =
-                        `<p><strong>Game Loop Running</strong></p>
-                         <p>Frame: ${frame_count}</p>
-                         <p>Elapsed: ${elapsed_time.toFixed(2)} seconds</p>
-                         <p>Average FPS: ${(frame_count / elapsed_time).toFixed(1)}</p>`;
+                    const state = game_get_state();
+                    const [ball_x, ball_y, ball_vx, ball_vy, paddle1_y, paddle2_y] = state;
 
-                    // Continue loop
-                    animationFrameId = requestAnimationFrame(gameLoop);
+                    ctx.fillStyle = '#f5f5f5';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    const paddleWidth = 10;
+                    const paddleHeight = 80;
+
+                    ctx.fillStyle = '#0066cc';
+                    ctx.fillRect(20, paddle1_y - paddleHeight / 2, paddleWidth, paddleHeight);
+                    ctx.fillRect(canvas.width - 30, paddle2_y - paddleHeight / 2, paddleWidth, paddleHeight);
+
+                    ctx.fillStyle = '#0066cc';
+                    ctx.beginPath();
+                    ctx.arc(ball_x, ball_y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    if (currentTimeSec - lastDisplayUpdate >= 0.1) {
+                        document.getElementById('output').innerHTML =
+                            `<p><strong>Game Running</strong></p>
+                             <p>Ball position: (${ball_x.toFixed(1)}, ${ball_y.toFixed(1)})</p>
+                             <p>Paddle 1 Y: ${paddle1_y.toFixed(1)} | Paddle 2 Y: ${paddle2_y.toFixed(1)}</p>`;
+
+                        lastDisplayUpdate = currentTimeSec;
+                    }
+
+                    requestAnimationFrame(gameLoop);
                 }
 
-                // Start button
-                document.getElementById('btn-start').addEventListener('click', () => {
-                    if (animationFrameId === null) {
-                        game_start();
-                        lastTime = 0; // Reset timing
-                        animationFrameId = requestAnimationFrame(gameLoop);
-                        console.log('Game loop started!');
-                    }
-                });
-
-                // Stop button
-                document.getElementById('btn-stop').addEventListener('click', () => {
-                    if (animationFrameId !== null) {
-                        game_stop();
-                        cancelAnimationFrame(animationFrameId);
-                        animationFrameId = null;
-                        lastTime = 0;
-                        console.log('Game loop stopped.');
-
-                        const [elapsed_time, frame_count] = game_get_state();
-                        document.getElementById('output').innerHTML =
-                            `<p><strong>Game Loop Stopped</strong></p>
-                             <p>Final Frame: ${frame_count}</p>
-                             <p>Total Time: ${elapsed_time.toFixed(2)} seconds</p>`;
-                    }
-                });
+                requestAnimationFrame(gameLoop);
 
             } catch (err) {
                 document.getElementById('status').textContent =
