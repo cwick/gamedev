@@ -203,7 +203,7 @@ impl GameState {
     }
 
     pub fn ball_visible(&self) -> bool {
-        self.serve_delay_remaining <= 0.0
+        self.phase == GamePhase::Playing && self.serve_delay_remaining <= 0.0
     }
 
     pub fn step(&mut self, dt_seconds: f32, p1_input: u32) {
@@ -344,12 +344,12 @@ impl GameState {
             self.phase = GamePhase::GameOver;
             self.winner = Some(scorer);
             self.serve_delay_remaining = 0.0;
-            self.launch_ball();
         } else {
             let mut rng = rand::thread_rng();
             self.serve_delay_remaining = rng.gen_range(SERVE_DELAY_MIN..SERVE_DELAY_MAX);
-            self.center_ball(0.0);
         }
+
+        self.center_ball(0.0);
     }
 
     fn check_paddle_collision(ball_x: f32, ball_y: f32, paddle_x: f32, paddle_y: f32) -> bool {

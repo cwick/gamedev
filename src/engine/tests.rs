@@ -332,6 +332,25 @@ mod scoring {
     }
 
     #[test]
+    fn ball_stays_hidden_during_game_over() {
+        let mut game = new_game();
+        game.winning_score = 2;
+        game.player_one_score = 1;
+        game.ball.position_x = FIELD_WIDTH - 5.0;
+        game.ball.position_y = FIELD_HEIGHT / 2.0;
+        game.ball.velocity_x = 400.0;
+        game.ball.velocity_y = 0.0;
+
+        game.step(DT, 0);
+
+        assert_eq!(game.phase, GamePhase::GameOver);
+        assert!(
+            !game.ball_visible(),
+            "ball should stay hidden once the game is over"
+        );
+    }
+
+    #[test]
     fn action_input_restarts_game_when_over() {
         let mut game = new_game();
         game.init(FIELD_WIDTH, FIELD_HEIGHT);
@@ -448,8 +467,8 @@ mod snapshot {
         );
         assert_eq!(
             game.snapshot[SnapshotField::BallVisible.idx()],
-            1.0,
-            "ball should remain visible when game over"
+            0.0,
+            "ball should stay hidden when game over"
         );
     }
 
