@@ -47,6 +47,8 @@ const PADDLE_HEIGHT: f32 = 60.0;
 const PADDLE1_X: f32 = 20.0;
 const PADDLE2_X: f32 = 770.0;
 const MAX_BOUNCE_ANGLE: f32 = std::f32::consts::FRAC_PI_3;
+const BALL_SPEED_ACCEL_FACTOR: f32 = 1.08;
+const BALL_MAX_SPEED: f32 = 900.0;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum GamePhase {
@@ -276,7 +278,9 @@ impl GameState {
                 continue;
             }
 
-            let speed = self.ball.velocity_x.hypot(self.ball.velocity_y);
+            let speed = (self.ball.velocity_x.hypot(self.ball.velocity_y)
+                * BALL_SPEED_ACCEL_FACTOR)
+                .min(BALL_MAX_SPEED);
             let paddle_half_h = PADDLE_HEIGHT / 2.0;
             let offset = ((self.ball.position_y - self.paddles[i].position_y) / paddle_half_h)
                 .clamp(-1.0, 1.0);

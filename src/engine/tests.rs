@@ -140,8 +140,8 @@ mod paddle_collisions {
             game.ball.velocity_x
         );
         assert!(
-            (speed_after - speed_before).abs() < 0.01,
-            "speed should be preserved: before={}, after={}",
+            speed_after >= speed_before,
+            "speed should not decrease after paddle hit: before={}, after={}",
             speed_before,
             speed_after
         );
@@ -174,8 +174,8 @@ mod paddle_collisions {
             game.ball.velocity_x
         );
         assert!(
-            (speed_after - speed_before).abs() < 0.01,
-            "speed should be preserved: before={}, after={}",
+            speed_after >= speed_before,
+            "speed should not decrease after paddle hit: before={}, after={}",
             speed_before,
             speed_after
         );
@@ -202,8 +202,8 @@ mod paddle_collisions {
             "ball should bounce upward from top edge"
         );
         assert!(
-            (speed_after - speed_before).abs() < 0.01,
-            "speed should be preserved"
+            speed_after >= speed_before,
+            "speed should not decrease after paddle hit"
         );
         let paddle_top = paddle_y - PADDLE_HEIGHT / 2.0;
         assert!(
@@ -369,7 +369,10 @@ mod scoring {
 
         game.step(DT, 0);
 
-        assert!(!game.ball_visible(), "ball should go invisible once a score happens");
+        assert!(
+            !game.ball_visible(),
+            "ball should go invisible once a score happens"
+        );
         assert!(
             game.serve_delay_remaining >= SERVE_DELAY_MIN
                 && game.serve_delay_remaining < SERVE_DELAY_MAX,
@@ -392,8 +395,14 @@ mod scoring {
         assert!(game.ball_visible(), "serve should eventually launch");
         assert_eq!(game.serve_delay_remaining, 0.0);
         let speed = (game.ball.velocity_x.powi(2) + game.ball.velocity_y.powi(2)).sqrt();
-        assert!(speed > 0.0, "ball should have non-zero velocity after launch");
-        assert!(game.conceded_by.is_none(), "conceded_by should be cleared on launch");
+        assert!(
+            speed > 0.0,
+            "ball should have non-zero velocity after launch"
+        );
+        assert!(
+            game.conceded_by.is_none(),
+            "conceded_by should be cleared on launch"
+        );
     }
 }
 
@@ -424,18 +433,9 @@ mod snapshot {
 
         game.update_snapshot();
 
-        assert_eq!(
-            game.snapshot[SnapshotField::PlayerOneScore.idx()],
-            7.0
-        );
-        assert_eq!(
-            game.snapshot[SnapshotField::PlayerTwoScore.idx()],
-            4.0
-        );
-        assert_eq!(
-            game.snapshot[SnapshotField::FieldWidth.idx()],
-            FIELD_WIDTH
-        );
+        assert_eq!(game.snapshot[SnapshotField::PlayerOneScore.idx()], 7.0);
+        assert_eq!(game.snapshot[SnapshotField::PlayerTwoScore.idx()], 4.0);
+        assert_eq!(game.snapshot[SnapshotField::FieldWidth.idx()], FIELD_WIDTH);
         assert_eq!(
             game.snapshot[SnapshotField::FieldHeight.idx()],
             FIELD_HEIGHT
@@ -479,6 +479,72 @@ mod snapshot {
             game.snapshot[SnapshotField::Winner.idx()],
             2.0,
             "player 2 wins"
+        );
+    }
+}
+
+mod speed_progression {
+    use super::*;
+
+    #[test]
+    fn speed_increases_after_paddle_hit() {
+        let mut game = new_game();
+        game.paddles[0].position_y = FIELD_HEIGHT / 2.0;
+        game.ball.position_x = PADDLE1_X + PADDLE_WIDTH / 2.0 + BALL_RADIUS + 2.0;
+        game.ball.position_y = FIELD_HEIGHT / 2.0;
+        game.ball.velocity_x = -300.0;
+        game.ball.velocity_y = 0.0;
+        let speed_before = game.ball.velocity_x.hypot(game.ball.velocity_y);
+
+        game.step(DT, 0);
+
+        let speed_after = game.ball.velocity_x.hypot(game.ball.velocity_y);
+        assert!(
+            speed_after > speed_before,
+            "speed should increase after paddle hit: before={speed_before}, after={speed_after}"
+        );
+    }
+
+    #[test]
+    fn speed_does_not_exceed_cap() {
+        let mut game = new_game();
+        game.paddles[0].position_y = FIELD_HEIGHT / 2.0;
+        game.ball.position_x = PADDLE1_X + PADDLE_WIDTH / 2.0 + BALL_RADIUS + 2.0;
+        game.ball.position_y = FIELD_HEIGHT / 2.0;
+        game.ball.velocity_x = -BALL_MAX_SPEED;
+        game.ball.velocity_y = 0.0;
+
+        game.step(DT, 0);
+
+        let speed_after = game.ball.velocity_x.hypot(game.ball.velocity_y);
+        assert!(
+            speed_after <= BALL_MAX_SPEED,
+            "speed must not exceed cap: got {speed_after}"
+        );
+    }
+
+    #[test]
+    fn speed_resets_on_new_serve() {
+        let mut game = new_game();
+        game.ball.position_x = FIELD_WIDTH - 5.0;
+        game.ball.position_y = FIELD_HEIGHT / 2.0;
+        game.ball.velocity_x = BALL_MAX_SPEED;
+        game.ball.velocity_y = 0.0;
+
+        game.step(DT, 0);
+        assert!(!game.ball_visible());
+
+        let mut ticks = 0;
+        while !game.ball_visible() {
+            game.step(DT, 0);
+            ticks += 1;
+            assert!(ticks < 300, "serve never launched");
+        }
+
+        let speed_after_serve = game.ball.velocity_x.hypot(game.ball.velocity_y);
+        assert!(
+            speed_after_serve <= 500.0,
+            "speed should reset to serve range after a point: got {speed_after_serve}"
         );
     }
 }
