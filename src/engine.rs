@@ -49,6 +49,9 @@ const PADDLE2_X: f32 = 770.0;
 const MAX_BOUNCE_ANGLE: f32 = std::f32::consts::FRAC_PI_3;
 const BALL_SPEED_ACCEL_FACTOR: f32 = 1.08;
 const BALL_MAX_SPEED: f32 = 900.0;
+const SPIN_TRANSFER_RATE: f32 = 0.1;
+const SPIN_DECAY_RATE: f32 = 0.90;
+const SPIN_MAX: f32 = 400.0;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum GamePhase {
@@ -85,6 +88,7 @@ struct Ball {
     position_y: f32,
     velocity_x: f32,
     velocity_y: f32,
+    spin: f32,
 }
 
 struct Paddle {
@@ -115,6 +119,7 @@ impl GameState {
                 position_y: 0.0,
                 velocity_x: 0.0,
                 velocity_y: 0.0,
+                spin: 0.0,
             },
             paddles: [
                 Paddle {
@@ -161,6 +166,7 @@ impl GameState {
         self.ball.position_y = self.field_height / 2.0;
         self.ball.velocity_x = 0.0;
         self.ball.velocity_y = 0.0;
+        self.ball.spin = 0.0;
     }
 
     fn launch_ball(&mut self) {
@@ -254,6 +260,8 @@ impl GameState {
         if self.ball_visible() {
             self.ball.position_x += self.ball.velocity_x * dt;
             self.ball.position_y += self.ball.velocity_y * dt;
+            self.ball.velocity_y += self.ball.spin * dt;
+            self.ball.spin *= SPIN_DECAY_RATE.powf(dt);
         }
 
         let paddle_half_height = PADDLE_HEIGHT / 2.0;
@@ -290,6 +298,9 @@ impl GameState {
             self.ball.velocity_x = direction * speed * angle.cos();
             self.ball.velocity_y = speed * angle.sin();
 
+            let spin_transfer = -self.paddles[i].velocity_y * SPIN_TRANSFER_RATE;
+            self.ball.spin = (self.ball.spin + spin_transfer).clamp(-SPIN_MAX, SPIN_MAX);
+
             let paddle_top = self.paddles[i].position_y - paddle_half_h;
             let paddle_bottom = self.paddles[i].position_y + paddle_half_h;
             let is_face_hit =
@@ -316,6 +327,7 @@ impl GameState {
             || self.ball.position_y + BALL_RADIUS >= self.field_height
         {
             self.ball.velocity_y = -self.ball.velocity_y;
+            self.ball.spin = -self.ball.spin;
             self.ball.position_y = self
                 .ball
                 .position_y
