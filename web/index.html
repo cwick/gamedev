@@ -78,6 +78,25 @@
 
         const PHASE_GAME_OVER = 1.0;
         const WINNER_PLAYER_ONE = 1.0;
+        const SNAP = Object.freeze({
+            BALL_X: 0,
+            BALL_Y: 1,
+            BALL_VX: 2,
+            BALL_VY: 3,
+            PADDLE1_X: 4,
+            PADDLE1_Y: 5,
+            PADDLE2_X: 6,
+            PADDLE2_Y: 7,
+            P1_SCORE: 8,
+            P2_SCORE: 9,
+            FIELD_W: 10,
+            FIELD_H: 11,
+            GAME_PHASE: 12,
+            WINNER: 13,
+            BALL_VISIBLE: 14,
+            PADDLE_W: 15,
+            PADDLE_H: 16,
+        });
 
         let lastTime = 0;
         let lastDisplayUpdate = 0;
@@ -141,10 +160,21 @@
                     const statePtr = game_state_ptr();
                     const stateLen = game_state_len();
                     const state = new Float32Array(wasmModule.memory.buffer, statePtr, stateLen);
-                    const [ball_x, ball_y, ball_vx, ball_vy,
-                        paddle1_x, paddle1_y, paddle2_x, paddle2_y,
-                        p1_score, p2_score, _field_w, _field_h, game_phase, winner, ball_visible,
-                        paddle_width, paddle_height] = state;
+                    const ball_x = state[SNAP.BALL_X];
+                    const ball_y = state[SNAP.BALL_Y];
+                    const ball_vx = state[SNAP.BALL_VX];
+                    const ball_vy = state[SNAP.BALL_VY];
+                    const paddle1_x = state[SNAP.PADDLE1_X];
+                    const paddle1_y = state[SNAP.PADDLE1_Y];
+                    const paddle2_x = state[SNAP.PADDLE2_X];
+                    const paddle2_y = state[SNAP.PADDLE2_Y];
+                    const p1_score = state[SNAP.P1_SCORE];
+                    const p2_score = state[SNAP.P2_SCORE];
+                    const game_phase = state[SNAP.GAME_PHASE];
+                    const winner = state[SNAP.WINNER];
+                    const ball_visible = state[SNAP.BALL_VISIBLE];
+                    const paddle_width = state[SNAP.PADDLE_W];
+                    const paddle_height = state[SNAP.PADDLE_H];
 
                     ctx.fillStyle = '#000000';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);

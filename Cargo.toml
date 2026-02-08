@@ -2,6 +2,9 @@
 name = "gamedev-wasm-hello"
 version = "0.1.0"
 edition = "2021"
+description = "Rust + WebAssembly Pong-style simulation"
+repository = "https://github.com/cwick/gamedev"
+license = "UNLICENSED"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

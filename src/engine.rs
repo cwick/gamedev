@@ -1,8 +1,37 @@
 use rand::Rng;
 
+#[repr(usize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SnapshotField {
+    BallX = 0,
+    BallY = 1,
+    BallVx = 2,
+    BallVy = 3,
+    Paddle1X = 4,
+    Paddle1Y = 5,
+    Paddle2X = 6,
+    Paddle2Y = 7,
+    PlayerOneScore = 8,
+    PlayerTwoScore = 9,
+    FieldWidth = 10,
+    FieldHeight = 11,
+    GamePhase = 12,
+    Winner = 13,
+    BallVisible = 14,
+    PaddleWidth = 15,
+    PaddleHeight = 16,
+    Count = 17,
+}
+
+impl SnapshotField {
+    const fn idx(self) -> usize {
+        self as usize
+    }
+}
+
 const PADDLE_SPEED: f32 = 300.0;
 const MAX_DT: f32 = 0.05;
-const STATE_FIELDS: usize = 17;
+const STATE_FIELDS: usize = SnapshotField::Count as usize;
 const AI_DEAD_ZONE: f32 = 10.0;
 const DEFAULT_WINNING_SCORE: u32 = 11;
 const SERVE_DELAY_MIN: f32 = 1.0;
@@ -334,26 +363,30 @@ impl GameState {
     }
 
     pub fn update_snapshot(&mut self) {
-        self.snapshot[0] = self.ball.position_x;
-        self.snapshot[1] = self.ball.position_y;
-        self.snapshot[2] = self.ball.velocity_x;
-        self.snapshot[3] = self.ball.velocity_y;
-        self.snapshot[4] = PADDLE1_X;
-        self.snapshot[5] = self.paddles[0].position_y;
-        self.snapshot[6] = PADDLE2_X;
-        self.snapshot[7] = self.paddles[1].position_y;
-        self.snapshot[8] = self.player_one_score as f32;
-        self.snapshot[9] = self.player_two_score as f32;
-        self.snapshot[10] = self.field_width;
-        self.snapshot[11] = self.field_height;
-        self.snapshot[12] = self.phase.as_snapshot_value();
-        self.snapshot[13] = match self.winner {
+        use SnapshotField::*;
+
+        let ball_visible = self.ball_visible();
+        let snapshot = &mut self.snapshot;
+        snapshot[BallX.idx()] = self.ball.position_x;
+        snapshot[BallY.idx()] = self.ball.position_y;
+        snapshot[BallVx.idx()] = self.ball.velocity_x;
+        snapshot[BallVy.idx()] = self.ball.velocity_y;
+        snapshot[Paddle1X.idx()] = PADDLE1_X;
+        snapshot[Paddle1Y.idx()] = self.paddles[0].position_y;
+        snapshot[Paddle2X.idx()] = PADDLE2_X;
+        snapshot[Paddle2Y.idx()] = self.paddles[1].position_y;
+        snapshot[PlayerOneScore.idx()] = self.player_one_score as f32;
+        snapshot[PlayerTwoScore.idx()] = self.player_two_score as f32;
+        snapshot[FieldWidth.idx()] = self.field_width;
+        snapshot[FieldHeight.idx()] = self.field_height;
+        snapshot[GamePhase.idx()] = self.phase.as_snapshot_value();
+        snapshot[Winner.idx()] = match self.winner {
             Some(player) => player.as_snapshot_value(),
             None => 0.0,
         };
-        self.snapshot[14] = if self.ball_visible() { 1.0 } else { 0.0 };
-        self.snapshot[15] = PADDLE_WIDTH;
-        self.snapshot[16] = PADDLE_HEIGHT;
+        snapshot[BallVisible.idx()] = if ball_visible { 1.0 } else { 0.0 };
+        snapshot[PaddleWidth.idx()] = PADDLE_WIDTH;
+        snapshot[PaddleHeight.idx()] = PADDLE_HEIGHT;
     }
 
     pub fn snapshot_ptr(&self) -> *const f32 {

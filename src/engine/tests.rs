@@ -424,13 +424,33 @@ mod snapshot {
 
         game.update_snapshot();
 
-        assert_eq!(game.snapshot[8], 7.0);
-        assert_eq!(game.snapshot[9], 4.0);
-        assert_eq!(game.snapshot[10], FIELD_WIDTH);
-        assert_eq!(game.snapshot[11], FIELD_HEIGHT);
-        assert_eq!(game.snapshot[12], 1.0);
-        assert_eq!(game.snapshot[13], 1.0, "player 1 should be winner");
-        assert_eq!(game.snapshot[14], 1.0, "ball should remain visible when game over");
+        assert_eq!(
+            game.snapshot[SnapshotField::PlayerOneScore.idx()],
+            7.0
+        );
+        assert_eq!(
+            game.snapshot[SnapshotField::PlayerTwoScore.idx()],
+            4.0
+        );
+        assert_eq!(
+            game.snapshot[SnapshotField::FieldWidth.idx()],
+            FIELD_WIDTH
+        );
+        assert_eq!(
+            game.snapshot[SnapshotField::FieldHeight.idx()],
+            FIELD_HEIGHT
+        );
+        assert_eq!(game.snapshot[SnapshotField::GamePhase.idx()], 1.0);
+        assert_eq!(
+            game.snapshot[SnapshotField::Winner.idx()],
+            1.0,
+            "player 1 should be winner"
+        );
+        assert_eq!(
+            game.snapshot[SnapshotField::BallVisible.idx()],
+            1.0,
+            "ball should remain visible when game over"
+        );
     }
 
     #[test]
@@ -438,15 +458,27 @@ mod snapshot {
         let mut game = new_game();
 
         game.update_snapshot();
-        assert_eq!(game.snapshot[13], 0.0, "no winner during play");
+        assert_eq!(
+            game.snapshot[SnapshotField::Winner.idx()],
+            0.0,
+            "no winner during play"
+        );
 
         game.phase = GamePhase::GameOver;
         game.winner = Some(Player::One);
         game.update_snapshot();
-        assert_eq!(game.snapshot[13], 1.0, "player 1 wins");
+        assert_eq!(
+            game.snapshot[SnapshotField::Winner.idx()],
+            1.0,
+            "player 1 wins"
+        );
 
         game.winner = Some(Player::Two);
         game.update_snapshot();
-        assert_eq!(game.snapshot[13], 2.0, "player 2 wins");
+        assert_eq!(
+            game.snapshot[SnapshotField::Winner.idx()],
+            2.0,
+            "player 2 wins"
+        );
     }
 }
