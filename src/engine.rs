@@ -2,7 +2,7 @@ use rand::Rng;
 
 const PADDLE_SPEED: f32 = 300.0;
 const MAX_DT: f32 = 0.05;
-const STATE_FIELDS: usize = 12;
+const STATE_FIELDS: usize = 14;
 const AI_DEAD_ZONE: f32 = 10.0;
 const DEFAULT_WINNING_SCORE: u32 = 11;
 
@@ -15,6 +15,7 @@ const PADDLE_WIDTH: f32 = 10.0;
 const PADDLE_HEIGHT: f32 = 80.0;
 const PADDLE1_X: f32 = 20.0;
 const PADDLE2_X: f32 = 770.0;
+const MAX_BOUNCE_ANGLE: f32 = std::f32::consts::FRAC_PI_3;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum GamePhase {
@@ -207,51 +208,46 @@ impl GameState {
                 continue;
             }
 
+            let speed = self.ball.velocity_x.hypot(self.ball.velocity_y);
             let paddle_half_h = PADDLE_HEIGHT / 2.0;
+            let offset = ((self.ball.position_y - self.paddles[i].position_y) / paddle_half_h)
+                .clamp(-1.0, 1.0);
+            let angle = offset * MAX_BOUNCE_ANGLE;
+            let direction = if i == 0 { 1.0_f32 } else { -1.0 };
+
+            self.ball.velocity_x = direction * speed * angle.cos();
+            self.ball.velocity_y = speed * angle.sin();
+
             let paddle_top = self.paddles[i].position_y - paddle_half_h;
             let paddle_bottom = self.paddles[i].position_y + paddle_half_h;
-            let face_hit =
+            let is_face_hit =
                 self.ball.position_y >= paddle_top && self.ball.position_y <= paddle_bottom;
 
-            if face_hit {
-                if i == 0 {
-                    self.ball.velocity_x = self.ball.velocity_x.abs();
-                    self.ball.position_x = paddle_x + (PADDLE_WIDTH / 2.0) + BALL_RADIUS;
-                } else {
-                    self.ball.velocity_x = -self.ball.velocity_x.abs();
-                    self.ball.position_x = paddle_x - (PADDLE_WIDTH / 2.0) - BALL_RADIUS;
-                }
+            if is_face_hit {
+                self.ball.position_x = paddle_x + direction * (PADDLE_WIDTH / 2.0 + BALL_RADIUS);
+            } else if self.ball.position_y < paddle_top {
+                self.ball.position_y = paddle_top - BALL_RADIUS;
             } else {
-                self.ball.velocity_y = -self.ball.velocity_y;
-                if self.ball.position_y < paddle_top {
-                    self.ball.position_y = paddle_top - BALL_RADIUS;
-                } else {
-                    self.ball.position_y = paddle_bottom + BALL_RADIUS;
-                }
-                let paddle_half_w = PADDLE_WIDTH / 2.0;
-                let inside_x = self.ball.position_x > paddle_x - paddle_half_w
-                    && self.ball.position_x < paddle_x + paddle_half_w;
-                if inside_x {
-                    if i == 0 {
-                        self.ball.position_x = paddle_x + paddle_half_w + BALL_RADIUS;
-                    } else {
-                        self.ball.position_x = paddle_x - paddle_half_w - BALL_RADIUS;
-                    }
-                }
+                self.ball.position_y = paddle_bottom + BALL_RADIUS;
             }
         }
     }
 
     fn collide_walls(&mut self) {
-        if self.ball.position_x <= 0.0 {
+        if self.ball.position_x - BALL_RADIUS <= 0.0 {
             self.conceded_by = Some(Player::One);
-        } else if self.ball.position_x >= self.field_width {
+        } else if self.ball.position_x + BALL_RADIUS >= self.field_width {
             self.conceded_by = Some(Player::Two);
         }
 
-        if self.ball.position_y <= 0.0 || self.ball.position_y >= self.field_height {
+        if self.ball.position_y - BALL_RADIUS <= 0.0
+            || self.ball.position_y + BALL_RADIUS >= self.field_height
+        {
             self.ball.velocity_y = -self.ball.velocity_y;
-            self.ball.position_y = self.ball.position_y.clamp(0.0, self.field_height);
+            self.ball.position_y = self
+                .ball
+                .position_y
+                .clamp(BALL_RADIUS, self.field_height - BALL_RADIUS);
         }
     }
 
@@ -297,14 +293,16 @@ impl GameState {
         self.snapshot[1] = self.ball.position_y;
         self.snapshot[2] = self.ball.velocity_x;
         self.snapshot[3] = self.ball.velocity_y;
-        self.snapshot[4] = self.paddles[0].position_y;
-        self.snapshot[5] = self.paddles[1].position_y;
-        self.snapshot[6] = self.player_one_score as f32;
-        self.snapshot[7] = self.player_two_score as f32;
-        self.snapshot[8] = self.field_width;
-        self.snapshot[9] = self.field_height;
-        self.snapshot[10] = self.phase.as_snapshot_value();
-        self.snapshot[11] = match self.winner {
+        self.snapshot[4] = PADDLE1_X;
+        self.snapshot[5] = self.paddles[0].position_y;
+        self.snapshot[6] = PADDLE2_X;
+        self.snapshot[7] = self.paddles[1].position_y;
+        self.snapshot[8] = self.player_one_score as f32;
+        self.snapshot[9] = self.player_two_score as f32;
+        self.snapshot[10] = self.field_width;
+        self.snapshot[11] = self.field_height;
+        self.snapshot[12] = self.phase.as_snapshot_value();
+        self.snapshot[13] = match self.winner {
             Some(player) => player.as_snapshot_value(),
             None => 0.0,
         };

@@ -141,7 +141,8 @@
                     const statePtr = game_state_ptr();
                     const stateLen = game_state_len();
                     const state = new Float32Array(wasmModule.memory.buffer, statePtr, stateLen);
-                    const [ball_x, ball_y, ball_vx, ball_vy, paddle1_y, paddle2_y,
+                    const [ball_x, ball_y, ball_vx, ball_vy,
+                        paddle1_x, paddle1_y, paddle2_x, paddle2_y,
                         p1_score, p2_score, _field_w, _field_h, game_phase, winner] = state;
 
                     ctx.fillStyle = '#000000';
@@ -160,8 +161,8 @@
                     const paddleHeight = 80;
 
                     ctx.fillStyle = '#FFFFFF';
-                    ctx.fillRect(20, paddle1_y - paddleHeight / 2, paddleWidth, paddleHeight);
-                    ctx.fillRect(canvas.width - 30, paddle2_y - paddleHeight / 2, paddleWidth, paddleHeight);
+                    ctx.fillRect(paddle1_x - paddleWidth / 2, paddle1_y - paddleHeight / 2, paddleWidth, paddleHeight);
+                    ctx.fillRect(paddle2_x - paddleWidth / 2, paddle2_y - paddleHeight / 2, paddleWidth, paddleHeight);
 
                     ctx.fillStyle = '#FFFFFF';
                     const ballSize = 12;
