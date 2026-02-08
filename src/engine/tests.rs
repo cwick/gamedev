@@ -243,6 +243,15 @@ mod paddle_collisions {
 mod scoring {
     use super::*;
 
+    fn wait_for_serve(game: &mut GameState) {
+        let mut ticks = 0;
+        while !game.ball_visible() {
+            game.step(DT, 0);
+            ticks += 1;
+            assert!(ticks < 300, "serve never launched");
+        }
+    }
+
     #[test]
     fn ball_exiting_left_scores_for_player_two() {
         let mut game = new_game();
@@ -282,6 +291,7 @@ mod scoring {
             game.ball.velocity_y = 0.0;
             game.step(DT, 0);
             assert_eq!(game.player_one_score, round);
+            wait_for_serve(&mut game);
         }
 
         for round in 1..=3 {
@@ -291,6 +301,7 @@ mod scoring {
             game.ball.velocity_y = 0.0;
             game.step(DT, 0);
             assert_eq!(game.player_two_score, round);
+            wait_for_serve(&mut game);
         }
 
         assert_eq!(game.player_one_score, 4);
@@ -347,6 +358,43 @@ mod scoring {
         assert_eq!(game.phase, GamePhase::Playing);
         assert_eq!(game.player_one_score, 5);
     }
+
+    #[test]
+    fn serve_delay_hides_ball_after_score() {
+        let mut game = new_game();
+        game.ball.position_x = 5.0;
+        game.ball.position_y = FIELD_HEIGHT / 2.0;
+        game.ball.velocity_x = -400.0;
+        game.ball.velocity_y = 0.0;
+
+        game.step(DT, 0);
+
+        assert!(!game.ball_visible(), "ball should go invisible once a score happens");
+        assert!(
+            game.serve_delay_remaining >= SERVE_DELAY_MIN
+                && game.serve_delay_remaining < SERVE_DELAY_MAX,
+            "delay should be between {} and {} but was {}",
+            SERVE_DELAY_MIN,
+            SERVE_DELAY_MAX,
+            game.serve_delay_remaining
+        );
+
+        let prev_delay = game.serve_delay_remaining;
+        game.step(DT, 0);
+        assert!(!game.ball_visible());
+        assert!(game.serve_delay_remaining < prev_delay);
+
+        let mut iterations = 0;
+        while !game.ball_visible() && iterations < 200 {
+            game.step(DT, 0);
+            iterations += 1;
+        }
+        assert!(game.ball_visible(), "serve should eventually launch");
+        assert_eq!(game.serve_delay_remaining, 0.0);
+        let speed = (game.ball.velocity_x.powi(2) + game.ball.velocity_y.powi(2)).sqrt();
+        assert!(speed > 0.0, "ball should have non-zero velocity after launch");
+        assert!(game.conceded_by.is_none(), "conceded_by should be cleared on launch");
+    }
 }
 
 mod snapshot {
@@ -382,6 +430,7 @@ mod snapshot {
         assert_eq!(game.snapshot[11], FIELD_HEIGHT);
         assert_eq!(game.snapshot[12], 1.0);
         assert_eq!(game.snapshot[13], 1.0, "player 1 should be winner");
+        assert_eq!(game.snapshot[14], 1.0, "ball should remain visible when game over");
     }
 
     #[test]

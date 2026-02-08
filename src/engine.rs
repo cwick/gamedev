@@ -2,9 +2,11 @@ use rand::Rng;
 
 const PADDLE_SPEED: f32 = 300.0;
 const MAX_DT: f32 = 0.05;
-const STATE_FIELDS: usize = 14;
+const STATE_FIELDS: usize = 17;
 const AI_DEAD_ZONE: f32 = 10.0;
 const DEFAULT_WINNING_SCORE: u32 = 11;
+const SERVE_DELAY_MIN: f32 = 1.0;
+const SERVE_DELAY_MAX: f32 = 3.0;
 
 const INPUT_UP: u32 = 0b001;
 const INPUT_DOWN: u32 = 0b010;
@@ -12,7 +14,7 @@ const INPUT_ACTION: u32 = 0b100;
 
 const BALL_RADIUS: f32 = 8.0;
 const PADDLE_WIDTH: f32 = 10.0;
-const PADDLE_HEIGHT: f32 = 80.0;
+const PADDLE_HEIGHT: f32 = 60.0;
 const PADDLE1_X: f32 = 20.0;
 const PADDLE2_X: f32 = 770.0;
 const MAX_BOUNCE_ANGLE: f32 = std::f32::consts::FRAC_PI_3;
@@ -70,6 +72,7 @@ pub struct GameState {
     winner: Option<Player>,
     conceded_by: Option<Player>,
     winning_score: u32,
+    serve_delay_remaining: f32,
     snapshot: [f32; STATE_FIELDS],
 }
 
@@ -100,6 +103,7 @@ impl GameState {
             winner: None,
             conceded_by: None,
             winning_score: DEFAULT_WINNING_SCORE,
+            serve_delay_remaining: 0.0,
             snapshot: [0.0; STATE_FIELDS],
         }
     }
@@ -112,34 +116,63 @@ impl GameState {
         self.phase = GamePhase::Playing;
         self.winner = None;
         self.winning_score = DEFAULT_WINNING_SCORE;
-        self.reset_ball();
+        self.conceded_by = None;
+        self.serve_delay_remaining = 0.0;
+        self.launch_ball();
         self.paddles[0].position_y = height / 2.0;
         self.paddles[0].velocity_y = 0.0;
         self.paddles[1].position_y = height / 2.0;
         self.paddles[1].velocity_y = 0.0;
     }
 
-    fn reset_ball(&mut self) {
+    fn center_ball(&mut self, side: f32) {
+        self.ball.position_x = self.field_width / 2.0 + self.field_width * 0.1 * side;
+        self.ball.position_y = self.field_height / 2.0;
+        self.ball.velocity_x = 0.0;
+        self.ball.velocity_y = 0.0;
+    }
+
+    fn launch_ball(&mut self) {
         let mut rng = rand::thread_rng();
         let half_cone = std::f32::consts::FRAC_PI_4;
         let spread = rng.gen_range(-half_cone..half_cone);
-        let angle = match self.conceded_by.take() {
-            Some(Player::One) => std::f32::consts::PI + spread,
-            Some(Player::Two) => spread,
+        let launch_side = match self.conceded_by.take() {
+            Some(Player::One) => 1.0,
+            Some(Player::Two) => -1.0,
             None => {
                 if rng.gen_bool(0.5) {
-                    spread
+                    1.0
                 } else {
-                    std::f32::consts::PI + spread
+                    -1.0
                 }
             }
         };
+        let base_angle = if launch_side > 0.0 {
+            std::f32::consts::PI
+        } else {
+            0.0
+        };
+        let angle = base_angle + spread;
         let speed = rng.gen_range(350.0..500.0);
 
-        self.ball.position_x = self.field_width / 2.0;
-        self.ball.position_y = self.field_height / 2.0;
+        self.center_ball(launch_side);
         self.ball.velocity_x = angle.cos() * speed;
         self.ball.velocity_y = angle.sin() * speed;
+        self.serve_delay_remaining = 0.0;
+    }
+
+    fn tick_serve_delay(&mut self, dt: f32) {
+        if self.serve_delay_remaining <= 0.0 {
+            return;
+        }
+        self.serve_delay_remaining = (self.serve_delay_remaining - dt).max(0.0);
+        if self.serve_delay_remaining <= 0.0 {
+            self.launch_ball();
+        }
+    }
+
+    pub fn ball_visible(&self) -> bool {
+        self.serve_delay_remaining <= 0.0
     }
 
     pub fn step(&mut self, dt_seconds: f32, p1_input: u32) {
@@ -149,13 +182,17 @@ impl GameState {
             }
             return;
         }
-        let dt = dt_seconds.min(MAX_DT);
+        let dt = dt_seconds.clamp(0.0, MAX_DT);
         let p2_input = self.compute_ai_input();
         self.apply_input(p1_input, p2_input);
         self.move_entities(dt);
-        self.collide_paddles();
-        self.collide_walls();
-        self.resolve_scoring();
+        if self.ball_visible() {
+            self.collide_paddles();
+            self.collide_walls();
+            self.resolve_scoring();
+        } else {
+            self.tick_serve_delay(dt);
+        }
     }
 
     fn apply_input(&mut self, p1_input: u32, p2_input: u32) {
@@ -183,8 +220,10 @@ impl GameState {
     }
 
     fn move_entities(&mut self, dt: f32) {
-        self.ball.position_x += self.ball.velocity_x * dt;
-        self.ball.position_y += self.ball.velocity_y * dt;
+        if self.ball_visible() {
+            self.ball.position_x += self.ball.velocity_x * dt;
+            self.ball.position_y += self.ball.velocity_y * dt;
+        }
 
         let paddle_half_height = PADDLE_HEIGHT / 2.0;
         for paddle in &mut self.paddles {
@@ -267,11 +306,17 @@ impl GameState {
             Player::One => self.player_one_score,
             Player::Two => self.player_two_score,
         };
+
         if score >= self.winning_score {
             self.phase = GamePhase::GameOver;
             self.winner = Some(scorer);
+            self.serve_delay_remaining = 0.0;
+            self.launch_ball();
+        } else {
+            let mut rng = rand::thread_rng();
+            self.serve_delay_remaining = rng.gen_range(SERVE_DELAY_MIN..SERVE_DELAY_MAX);
+            self.center_ball(0.0);
         }
-        self.reset_ball();
     }
 
     fn check_paddle_collision(ball_x: f32, ball_y: f32, paddle_x: f32, paddle_y: f32) -> bool {
@@ -306,6 +351,9 @@ impl GameState {
             Some(player) => player.as_snapshot_value(),
             None => 0.0,
         };
+        self.snapshot[14] = if self.ball_visible() { 1.0 } else { 0.0 };
+        self.snapshot[15] = PADDLE_WIDTH;
+        self.snapshot[16] = PADDLE_HEIGHT;
     }
 
     pub fn snapshot_ptr(&self) -> *const f32 {
