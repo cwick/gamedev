@@ -4,11 +4,7 @@ Rust WebAssembly Pong game. Rust handles all game logic; JS handles rendering an
 
 ## Build Rule
 
-**After ANY change to Rust code, you MUST run:**
-```bash
-wasm-pack build --target web --out-dir web/dist
-```
-The browser only loads compiled WASM from `web/dist/`. Rust changes have no effect until you rebuild. Use `--dev` for faster builds during iteration.
+Local tooling now runs `wasm-pack` automatically (e.g., via `just dev`/`cargo watch`), so manual rebuilds are no longer required. The browser still loads WASM from `web/dist/`, but you can rely on the dev workflow to keep it up to date.
 
 ## Architecture
 
