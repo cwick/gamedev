@@ -2,12 +2,13 @@ use rand::Rng;
 
 const PADDLE_SPEED: f32 = 300.0;
 const MAX_DT: f32 = 0.05;
-const STATE_FIELDS: usize = 11;
+const STATE_FIELDS: usize = 12;
 const AI_DEAD_ZONE: f32 = 10.0;
 const DEFAULT_WINNING_SCORE: u32 = 11;
 
-const INPUT_UP: u32 = 0b01;
-const INPUT_DOWN: u32 = 0b10;
+const INPUT_UP: u32 = 0b001;
+const INPUT_DOWN: u32 = 0b010;
+const INPUT_ACTION: u32 = 0b100;
 
 const BALL_RADIUS: f32 = 8.0;
 const PADDLE_WIDTH: f32 = 10.0;
@@ -19,6 +20,30 @@ const PADDLE2_X: f32 = 770.0;
 enum GamePhase {
     Playing,
     GameOver,
+}
+
+impl GamePhase {
+    const fn as_snapshot_value(self) -> f32 {
+        match self {
+            GamePhase::Playing => 0.0,
+            GamePhase::GameOver => 1.0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Player {
+    One,
+    Two,
+}
+
+impl Player {
+    const fn as_snapshot_value(self) -> f32 {
+        match self {
+            Player::One => 1.0,
+            Player::Two => 2.0,
+        }
+    }
 }
 
 struct Ball {
@@ -41,6 +66,8 @@ pub struct GameState {
     player_one_score: u32,
     player_two_score: u32,
     phase: GamePhase,
+    winner: Option<Player>,
+    scored_by: Option<Player>,
     winning_score: u32,
     snapshot: [f32; STATE_FIELDS],
 }
@@ -69,6 +96,8 @@ impl GameState {
             player_one_score: 0,
             player_two_score: 0,
             phase: GamePhase::Playing,
+            winner: None,
+            scored_by: None,
             winning_score: DEFAULT_WINNING_SCORE,
             snapshot: [0.0; STATE_FIELDS],
         }
@@ -80,6 +109,7 @@ impl GameState {
         self.player_one_score = 0;
         self.player_two_score = 0;
         self.phase = GamePhase::Playing;
+        self.winner = None;
         self.winning_score = DEFAULT_WINNING_SCORE;
         self.reset_ball();
         self.paddles[0].position_y = height / 2.0;
@@ -106,6 +136,9 @@ impl GameState {
 
     pub fn step(&mut self, dt_seconds: f32, p1_input: u32) {
         if self.phase == GamePhase::GameOver {
+            if (p1_input & INPUT_ACTION) != 0 {
+                self.init(self.field_width, self.field_height);
+            }
             return;
         }
         let dt = dt_seconds.min(MAX_DT);
@@ -114,6 +147,7 @@ impl GameState {
         self.move_entities(dt);
         self.collide_paddles();
         self.collide_walls();
+        self.resolve_scoring();
     }
 
     fn apply_input(&mut self, p1_input: u32, p2_input: u32) {
@@ -203,23 +237,34 @@ impl GameState {
 
     fn collide_walls(&mut self) {
         if self.ball.position_x <= 0.0 {
-            self.player_two_score += 1;
-            if self.player_two_score >= self.winning_score {
-                self.phase = GamePhase::GameOver;
-            }
-            self.reset_ball();
+            self.scored_by = Some(Player::Two);
         } else if self.ball.position_x >= self.field_width {
-            self.player_one_score += 1;
-            if self.player_one_score >= self.winning_score {
-                self.phase = GamePhase::GameOver;
-            }
-            self.reset_ball();
+            self.scored_by = Some(Player::One);
         }
 
         if self.ball.position_y <= 0.0 || self.ball.position_y >= self.field_height {
             self.ball.velocity_y = -self.ball.velocity_y;
             self.ball.position_y = self.ball.position_y.clamp(0.0, self.field_height);
         }
+    }
+
+    fn resolve_scoring(&mut self) {
+        let Some(player) = self.scored_by.take() else {
+            return;
+        };
+        match player {
+            Player::One => self.player_one_score += 1,
+            Player::Two => self.player_two_score += 1,
+        }
+        let score = match player {
+            Player::One => self.player_one_score,
+            Player::Two => self.player_two_score,
+        };
+        if score >= self.winning_score {
+            self.phase = GamePhase::GameOver;
+            self.winner = Some(player);
+        }
+        self.reset_ball();
     }
 
     fn check_paddle_collision(ball_x: f32, ball_y: f32, paddle_x: f32, paddle_y: f32) -> bool {
@@ -247,9 +292,10 @@ impl GameState {
         self.snapshot[7] = self.player_two_score as f32;
         self.snapshot[8] = self.field_width;
         self.snapshot[9] = self.field_height;
-        self.snapshot[10] = match self.phase {
-            GamePhase::Playing => 0.0,
-            GamePhase::GameOver => 1.0,
+        self.snapshot[10] = self.phase.as_snapshot_value();
+        self.snapshot[11] = match self.winner {
+            Some(player) => player.as_snapshot_value(),
+            None => 0.0,
         };
     }
 

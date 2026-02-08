@@ -321,6 +321,7 @@ fn scores_appear_in_snapshot() {
     game.player_one_score = 7;
     game.player_two_score = 4;
     game.phase = GamePhase::GameOver;
+    game.winner = Some(Player::One);
 
     game.update_snapshot();
 
@@ -329,4 +330,52 @@ fn scores_appear_in_snapshot() {
     assert_eq!(game.snapshot[8], FIELD_WIDTH);
     assert_eq!(game.snapshot[9], FIELD_HEIGHT);
     assert_eq!(game.snapshot[10], 1.0);
+    assert_eq!(game.snapshot[11], 1.0, "player 1 should be winner");
+}
+
+#[test]
+fn action_input_restarts_game_when_over() {
+    let mut game = GameState::new();
+    game.init(FIELD_WIDTH, FIELD_HEIGHT);
+    game.phase = GamePhase::GameOver;
+    game.winner = Some(Player::One);
+    game.player_one_score = 11;
+
+    game.step(DT, INPUT_ACTION);
+
+    assert_eq!(game.phase, GamePhase::Playing);
+    assert_eq!(game.winner, None);
+    assert_eq!(game.player_one_score, 0);
+    assert_eq!(game.player_two_score, 0);
+}
+
+#[test]
+fn action_input_ignored_during_play() {
+    let mut game = GameState::new();
+    game.init(FIELD_WIDTH, FIELD_HEIGHT);
+    game.player_one_score = 5;
+
+    game.step(DT, INPUT_ACTION);
+
+    assert_eq!(game.phase, GamePhase::Playing);
+    assert_eq!(game.player_one_score, 5);
+}
+
+#[test]
+fn winner_field_in_snapshot() {
+    let mut game = GameState::new();
+    game.field_width = FIELD_WIDTH;
+    game.field_height = FIELD_HEIGHT;
+
+    game.update_snapshot();
+    assert_eq!(game.snapshot[11], 0.0, "no winner during play");
+
+    game.phase = GamePhase::GameOver;
+    game.winner = Some(Player::One);
+    game.update_snapshot();
+    assert_eq!(game.snapshot[11], 1.0, "player 1 wins");
+
+    game.winner = Some(Player::Two);
+    game.update_snapshot();
+    assert_eq!(game.snapshot[11], 2.0, "player 2 wins");
 }

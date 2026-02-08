@@ -76,14 +76,17 @@
     <script type="module">
         import init, { engine_init, engine_step, game_state_ptr, game_state_len } from './dist/gamedev_wasm_hello.js';
 
+        const PHASE_GAME_OVER = 1.0;
+        const WINNER_PLAYER_ONE = 1.0;
+
         let lastTime = 0;
         let lastDisplayUpdate = 0;
         let wasmModule;
-        let currentGamePhase = 0.0;
 
         const keys = {
             p1_up: false,
-            p1_down: false
+            p1_down: false,
+            action: false
         };
 
         window.addEventListener('keydown', (e) => {
@@ -95,8 +98,8 @@
                 keys.p1_down = true;
                 e.preventDefault();
             }
-            if (e.key === ' ' && currentGamePhase === 1.0) {
-                engine_init(800, 600);
+            if (e.key === ' ') {
+                keys.action = true;
                 e.preventDefault();
             }
         });
@@ -107,6 +110,9 @@
             }
             if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
                 keys.p1_down = false;
+            }
+            if (e.key === ' ') {
+                keys.action = false;
             }
         });
 
@@ -128,7 +134,7 @@
                     lastTime = currentTimeSec;
 
                     if (deltaTime > 0) {
-                        const input_bits = (keys.p1_up ? 0b01 : 0) | (keys.p1_down ? 0b10 : 0);
+                        const input_bits = (keys.p1_up ? 0b001 : 0) | (keys.p1_down ? 0b010 : 0) | (keys.action ? 0b100 : 0);
                         engine_step(deltaTime, input_bits);
                     }
 
@@ -136,8 +142,7 @@
                     const stateLen = game_state_len();
                     const state = new Float32Array(wasmModule.memory.buffer, statePtr, stateLen);
                     const [ball_x, ball_y, ball_vx, ball_vy, paddle1_y, paddle2_y,
-                        p1_score, p2_score, _field_w, _field_h, game_phase] = state;
-                    currentGamePhase = game_phase;
+                        p1_score, p2_score, _field_w, _field_h, game_phase, winner] = state;
 
                     ctx.fillStyle = '#000000';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -167,10 +172,10 @@
                     ctx.fillText(String(p1_score), canvas.width / 4, 60);
                     ctx.fillText(String(p2_score), (canvas.width * 3) / 4, 60);
 
-                    if (game_phase === 1.0) {
-                        const winner = p1_score > p2_score ? 'PLAYER 1' : 'PLAYER 2';
+                    if (game_phase === PHASE_GAME_OVER) {
+                        const winnerName = winner === WINNER_PLAYER_ONE ? 'PLAYER 1' : 'PLAYER 2';
                         ctx.font = '36px monospace';
-                        ctx.fillText(winner + ' WINS', canvas.width / 2, canvas.height / 2);
+                        ctx.fillText(winnerName + ' WINS', canvas.width / 2, canvas.height / 2);
                         ctx.font = '20px monospace';
                         ctx.fillText('PRESS SPACE TO RESTART', canvas.width / 2, canvas.height / 2 + 40);
                     }
