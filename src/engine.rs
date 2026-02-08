@@ -67,7 +67,7 @@ pub struct GameState {
     player_two_score: u32,
     phase: GamePhase,
     winner: Option<Player>,
-    scored_by: Option<Player>,
+    conceded_by: Option<Player>,
     winning_score: u32,
     snapshot: [f32; STATE_FIELDS],
 }
@@ -97,7 +97,7 @@ impl GameState {
             player_two_score: 0,
             phase: GamePhase::Playing,
             winner: None,
-            scored_by: None,
+            conceded_by: None,
             winning_score: DEFAULT_WINNING_SCORE,
             snapshot: [0.0; STATE_FIELDS],
         }
@@ -121,10 +121,17 @@ impl GameState {
     fn reset_ball(&mut self) {
         let mut rng = rand::thread_rng();
         let half_cone = std::f32::consts::FRAC_PI_4;
-        let angle = if rng.gen_bool(0.5) {
-            rng.gen_range(-half_cone..half_cone)
-        } else {
-            std::f32::consts::PI + rng.gen_range(-half_cone..half_cone)
+        let spread = rng.gen_range(-half_cone..half_cone);
+        let angle = match self.conceded_by.take() {
+            Some(Player::One) => std::f32::consts::PI + spread,
+            Some(Player::Two) => spread,
+            None => {
+                if rng.gen_bool(0.5) {
+                    spread
+                } else {
+                    std::f32::consts::PI + spread
+                }
+            }
         };
         let speed = rng.gen_range(350.0..500.0);
 
@@ -237,9 +244,9 @@ impl GameState {
 
     fn collide_walls(&mut self) {
         if self.ball.position_x <= 0.0 {
-            self.scored_by = Some(Player::Two);
+            self.conceded_by = Some(Player::One);
         } else if self.ball.position_x >= self.field_width {
-            self.scored_by = Some(Player::One);
+            self.conceded_by = Some(Player::Two);
         }
 
         if self.ball.position_y <= 0.0 || self.ball.position_y >= self.field_height {
@@ -249,20 +256,24 @@ impl GameState {
     }
 
     fn resolve_scoring(&mut self) {
-        let Some(player) = self.scored_by.take() else {
+        let Some(conceder) = self.conceded_by else {
             return;
         };
-        match player {
+        let scorer = match conceder {
+            Player::One => Player::Two,
+            Player::Two => Player::One,
+        };
+        match scorer {
             Player::One => self.player_one_score += 1,
             Player::Two => self.player_two_score += 1,
         }
-        let score = match player {
+        let score = match scorer {
             Player::One => self.player_one_score,
             Player::Two => self.player_two_score,
         };
         if score >= self.winning_score {
             self.phase = GamePhase::GameOver;
-            self.winner = Some(player);
+            self.winner = Some(scorer);
         }
         self.reset_ball();
     }
