@@ -208,7 +208,7 @@ impl GameState {
         }
     }
 
-    pub fn ball_visible(&self) -> bool {
+    fn ball_visible(&self) -> bool {
         self.phase == GamePhase::Playing && self.serve_delay_remaining <= 0.0
     }
 
