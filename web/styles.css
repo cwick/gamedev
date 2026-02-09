@@ -1,0 +1,167 @@
+@layer base, components, utilities;
+
+@layer base {
+  :root {
+    /* Fonts */
+    --font-sans: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-mono: Consolas, Menlo, monospace;
+
+    /* Spacing */
+    --space-1: 5px;
+    --space-2: 10px;
+    --space-3: 20px;
+
+    /* Radii and shadows */
+    --radius-1: 4px;
+    --radius-2: 8px;
+    --shadow-1: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    /* App colors */
+    --color-bg: #f5f5f5;
+    --color-surface: #ffffff;
+    --color-text: #333;
+    --color-accent: #0066cc;
+
+    /* Debug colors */
+    --debug-bg: #1a1a2e;
+    --debug-border: #0066cc;
+    --debug-text: #e8e8e8;
+    --debug-muted: #aaa;
+    --debug-title: #66d9ff;
+    --debug-value: #00ff00;
+    --debug-warn: #ffaa00;
+    --debug-true: #00ff00;
+    --debug-false: #ff6666;
+    --debug-divider: #444;
+
+    /* Debug sizing */
+    --debug-width: 320px;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    max-width: 940px;
+    margin: 50px auto;
+    padding: var(--space-3);
+    background: var(--color-bg);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  /* App shell */
+  .app {
+    display: contents;
+  }
+
+  .app__card {
+    background: var(--color-surface);
+    padding: 30px;
+    border-radius: var(--radius-2);
+    box-shadow: var(--shadow-1);
+  }
+
+  .app__title {
+    color: var(--color-text);
+    border-bottom: 3px solid var(--color-accent);
+    padding-bottom: var(--space-2);
+    margin: 0 0 var(--space-3) 0;
+  }
+
+  .app__status {
+    background: #e7f3ff;
+    padding: var(--space-2);
+    border-radius: var(--radius-1);
+    margin: var(--space-3) 0;
+  }
+
+  .app__canvas {
+    border: 1px solid #666;
+    margin: var(--space-3) auto 0;
+    display: block;
+    background: #000;
+  }
+
+  /* Debug panel */
+  .debug {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--debug-width);
+    background: var(--debug-bg);
+    border-left: 2px solid var(--debug-border);
+    color: var(--debug-text);
+    font-family: var(--font-mono);
+    font-size: 15px;
+    overflow-y: auto;
+    z-index: 1000;
+    padding: var(--space-2);
+  }
+
+  .debug__section {
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--debug-divider);
+  }
+
+  .debug__section:last-child {
+    border-bottom: none;
+  }
+
+  .debug__title {
+    color: var(--debug-title);
+    font-size: 13px;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 0 0 8px 0;
+    letter-spacing: 1px;
+  }
+
+  .debug__row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+
+  .debug__label {
+    color: var(--debug-muted);
+    text-align: left;
+    flex: 1;
+  }
+
+  .debug__value {
+    color: var(--debug-value);
+    text-align: right;
+    font-weight: bold;
+    flex: 0 0 auto;
+    margin-left: var(--space-2);
+  }
+
+  .debug__value--bool {
+    color: var(--debug-warn);
+  }
+
+  .debug__value--true {
+    color: var(--debug-true);
+  }
+
+  .debug__value--false {
+    color: var(--debug-false);
+  }
+
+  .debug__empty {
+    padding: var(--space-3);
+    text-align: center;
+  }
+}
+
+@layer utilities {
+  .u-hidden {
+    display: none !important;
+  }
+}

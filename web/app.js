@@ -9,13 +9,15 @@ export function setDebugState(newState) {
 }
 
 const DebugRow = ({ label, value, isBoolean = false }) => {
-  const className = isBoolean ? `debug-bool ${value ? "true" : "false"}` : "";
+  const modifiers = isBoolean
+    ? `debug__value--bool debug__value--${value ? "true" : "false"}`
+    : "";
   const displayValue = isBoolean ? (value ? "YES" : "NO") : value;
 
   return html`
-    <div class="debug-row">
-      <span class="debug-label">${label}</span>
-      <span class="debug-value ${className}">${displayValue}</span>
+    <div class="debug__row">
+      <span class="debug__label">${label}</span>
+      <span class="debug__value ${modifiers}">${displayValue}</span>
     </div>
   `;
 };
@@ -23,8 +25,8 @@ const DebugRow = ({ label, value, isBoolean = false }) => {
 const DebugPanel = ({ gameState }) => {
   if (!gameState) {
     return html`
-      <div class="debug-panel">
-        <div style="padding: 20px; text-align: center;">
+      <div class="debug">
+        <div class="debug__empty">
           <p>Waiting for game to initialize...</p>
         </div>
       </div>
@@ -38,27 +40,27 @@ const DebugPanel = ({ gameState }) => {
   };
 
   return html`
-    <div class="debug-panel">
-      <div class="debug-section">
-        <h3>⚫ Ball</h3>
+    <div class="debug">
+      <div class="debug__section">
+        <h3 class="debug__title">Ball</h3>
         <${DebugRow} label="X" value=${gameState.ball_x.toFixed(1)} />
         <${DebugRow} label="Y" value=${gameState.ball_y.toFixed(1)} />
       </div>
 
-      <div class="debug-section">
-        <h3>🎾 Paddles</h3>
+      <div class="debug__section">
+        <h3 class="debug__title">Paddles</h3>
         <${DebugRow} label="P1 Y" value=${gameState.paddle1_y.toFixed(1)} />
         <${DebugRow} label="P2 Y" value=${gameState.paddle2_y.toFixed(1)} />
       </div>
 
-      <div class="debug-section">
-        <h3>📊 Score</h3>
+      <div class="debug__section">
+        <h3 class="debug__title">Score</h3>
         <${DebugRow} label="P1" value=${gameState.p1_score} />
         <${DebugRow} label="P2" value=${gameState.p2_score} />
       </div>
 
-      <div class="debug-section">
-        <h3>🎮 Game State</h3>
+      <div class="debug__section">
+        <h3 class="debug__title">Game State</h3>
         <${DebugRow}
           label="Phase"
           value=${getGamePhaseLabel(gameState.game_phase)}
@@ -80,20 +82,22 @@ const App = () => {
   }, []);
 
   return html`
-    <div>
-      <div class="container">
-        <h1>🦀 Rust WebAssembly Hello World</h1>
+    <div class="app">
+      <div class="app__card">
+        <h1 class="app__title">🦀 Rust WebAssembly Hello World</h1>
 
-        <div class="info">
+        <div class="app__status">
           <strong>Status:</strong>
-          <span id="status">Loading WebAssembly module...</span>
+          <span id="status" class="app__status-value"
+            >Loading WebAssembly module...</span
+          >
         </div>
 
         <canvas
           id="gameCanvas"
+          class="app__canvas"
           width="800"
           height="600"
-          style="border: 1px solid #666; margin-top: 20px; display: block; max-width: 100%; background: #000;"
         ></canvas>
       </div>
 
