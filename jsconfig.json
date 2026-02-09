@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "baseUrl": ".",
+    "paths": {
+      "preact": ["web/vendor/preact.module.js"]
+    }
+  },
+  "include": ["web/**/*.js", "web/**/*.mjs"]
+}

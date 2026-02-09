@@ -60,21 +60,26 @@
 </head>
 
 <body>
-    <div class="container">
-        <h1>🦀 Rust WebAssembly Hello World</h1>
+    <div id="app"></div>
 
-        <div class="info">
-            <strong>Status:</strong> <span id="status">Loading WebAssembly module...</span>
-        </div>
+    <script type="importmap">
+        {
+            "imports": {
+                "preact": "./vendor/preact.module.js"
+            }
+        }
+    </script>
 
-        <div id="output"></div>
+    <script type="module">
+        import { html, render } from "preact";
+        import App from './app.js';
 
-        <canvas id="gameCanvas" width="800" height="600"
-            style="border: 1px solid #666; margin-top: 20px; display: block; max-width: 100%; background: #000;"></canvas>
-    </div>
+        render(html`<${App} />`, document.getElementById("app"));
+    </script>
 
     <script type="module">
         import init, { engine_init, engine_step, game_state_ptr, game_state_len } from './dist/gamedev_wasm_hello.js';
+        import { setDebugState } from './app.js';
 
         const PHASE_GAME_OVER = 1.0;
         const WINNER_PLAYER_ONE = 1.0;
@@ -212,13 +217,16 @@
                     }
 
                     if (currentTimeSec - lastDisplayUpdate >= 0.1) {
-                        document.getElementById('output').innerHTML =
-                            `<p><strong>Game Running</strong></p>
-                             <p>Ball position: (${ball_x.toFixed(1)}, ${ball_y.toFixed(1)})</p>
-                             <p>Paddle 1 Y: ${paddle1_y.toFixed(1)} | Paddle 2 Y: ${paddle2_y.toFixed(1)}</p>
-                             <p>Score: P1=${p1_score} | P2=${p2_score} | Phase=${game_phase} | Len=${stateLen}</p>
-                             <p>Controls: W/ArrowUp (up) | S/ArrowDown (down)</p>`;
-
+                        setDebugState({
+                            ball_x,
+                            ball_y,
+                            paddle1_y,
+                            paddle2_y,
+                            p1_score,
+                            p2_score,
+                            game_phase,
+                            stateLen,
+                        });
                         lastDisplayUpdate = currentTimeSec;
                     }
 
