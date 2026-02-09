@@ -56,6 +56,75 @@
             border-radius: 4px;
             margin: 20px 0;
         }
+
+        .debug-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 320px;
+            background: #1a1a2e;
+            border-left: 2px solid #0066cc;
+            color: #e8e8e8;
+            font-family: Consolas, Menlo, monospace;
+            font-size: 15px;
+            overflow-y: auto;
+            z-index: 1000;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .debug-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #444;
+        }
+
+        .debug-section:last-child {
+            border-bottom: none;
+        }
+
+        .debug-section h3 {
+            color: #66d9ff;
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0 0 8px 0;
+            letter-spacing: 1px;
+        }
+
+        .debug-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            align-items: center;
+        }
+
+        .debug-label {
+            color: #aaa;
+            text-align: left;
+            flex: 1;
+        }
+
+        .debug-value {
+            color: #00ff00;
+            text-align: right;
+            font-weight: bold;
+            flex: 0 0 auto;
+            margin-left: 10px;
+        }
+
+        .debug-bool {
+            color: #ffaa00;
+        }
+
+        .debug-bool.true {
+            color: #00ff00;
+        }
+
+        .debug-bool.false {
+            color: #ff6666;
+        }
     </style>
 </head>
 
