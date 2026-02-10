@@ -30,3 +30,7 @@ web/index.html      → canvas rendering, input handling, game loop
 ## Code Quality
 
 All code must pass `cargo clippy` without warnings and be formatted with `cargo fmt`.
+
+## Commit Messages
+
+Keep commit messages to one or two lines. The first line should be a concise summary of the change. If additional context is needed, add a blank line and then provide details on subsequent lines.
