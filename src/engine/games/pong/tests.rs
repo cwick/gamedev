@@ -22,6 +22,14 @@ fn paddle_entity(world: &World, index: usize) -> crate::engine::ecs::entity::Ent
     pong_ref(world).paddles[index]
 }
 
+fn pong_ref(world: &World) -> &PongState {
+    world.resource::<PongState>()
+}
+
+fn pong_mut(world: &mut World) -> &mut PongState {
+    world.resource_mut::<PongState>()
+}
+
 mod wall_collisions {
     use super::*;
 

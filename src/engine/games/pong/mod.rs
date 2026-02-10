@@ -55,24 +55,12 @@ const SPIN_TRANSFER_RATE: f32 = 0.1;
 const SPIN_DECAY_RATE: f32 = 0.90;
 const SPIN_MAX: f32 = 400.0;
 
-fn pong_mut(world: &mut World) -> &mut PongState {
-    world
-        .get_resource_mut::<PongState>()
-        .expect("pong systems require PongState in World resources")
-}
-
-fn pong_ref(world: &World) -> &PongState {
-    world
-        .get_resource::<PongState>()
-        .expect("pong systems require PongState in World resources")
-}
-
 fn reset_game(world: &mut World) {
     let width = world.field.width;
     let height = world.field.height;
 
     {
-        let pong = pong_mut(world);
+        let pong = world.resource_mut::<PongState>();
         pong.player_one_score = 0;
         pong.player_two_score = 0;
         pong.phase = PongPhase::Playing;
@@ -83,13 +71,13 @@ fn reset_game(world: &mut World) {
     }
 
     let paddle_mid = height / 2.0;
-    let paddles = pong_ref(world).paddles;
+    let paddles = world.resource::<PongState>().paddles;
     for &paddle in &paddles {
         world.transform_mut(paddle).y = paddle_mid;
         world.velocity_mut(paddle).y = 0.0;
     }
 
-    let ball = pong_ref(world).ball;
+    let ball = world.resource::<PongState>().ball;
     world.transform_mut(ball).x = width / 2.0;
     world.transform_mut(ball).y = height / 2.0;
     world.velocity_mut(ball).x = 0.0;
@@ -102,7 +90,7 @@ fn reset_game(world: &mut World) {
 fn center_ball(world: &mut World, side: f32) {
     let width = world.field.width;
     let height = world.field.height;
-    let pong = pong_mut(world);
+    let pong = world.resource_mut::<PongState>();
     let ball = pong.ball;
 
     world.transform_mut(ball).x = width / 2.0 + width * 0.1 * side;
@@ -117,7 +105,7 @@ fn launch_ball(world: &mut World) {
     let half_cone = std::f32::consts::FRAC_PI_4;
     let spread = rng.gen_range(-half_cone..half_cone);
     let launch_side = {
-        let pong = pong_mut(world);
+        let pong = world.resource_mut::<PongState>();
         match pong.conceded_by.take() {
             Some(PongPlayer::One) => 1.0,
             Some(PongPlayer::Two) => -1.0,
@@ -140,16 +128,16 @@ fn launch_ball(world: &mut World) {
 
     center_ball(world, launch_side);
 
-    let ball = pong_ref(world).ball;
+    let ball = world.resource::<PongState>().ball;
     let velocity = world.velocity_mut(ball);
     velocity.x = angle.cos() * speed;
     velocity.y = angle.sin() * speed;
-    pong_mut(world).serve_delay_remaining = 0.0;
+    world.resource_mut::<PongState>().serve_delay_remaining = 0.0;
 }
 
 fn tick_serve_delay(world: &mut World, dt: f32) {
     let should_launch = {
-        let pong = pong_mut(world);
+        let pong = world.resource_mut::<PongState>();
         if pong.serve_delay_remaining <= 0.0 {
             return;
         }
@@ -162,11 +150,11 @@ fn tick_serve_delay(world: &mut World, dt: f32) {
 }
 
 fn ball_visible(world: &World) -> bool {
-    pong_ref(world).ball_visible()
+    world.resource::<PongState>().ball_visible()
 }
 
 fn compute_ai_input(world: &World) -> u32 {
-    let pong = pong_ref(world);
+    let pong = world.resource::<PongState>();
     let ball_y = world.transform(pong.ball).y;
     let paddle_y = world.transform(pong.paddles[1]).y;
     let diff = ball_y - paddle_y;
@@ -181,7 +169,7 @@ fn compute_ai_input(world: &World) -> u32 {
 }
 
 fn apply_input(world: &mut World, _dt: f32) {
-    let phase = pong_ref(world).phase;
+    let phase = world.resource::<PongState>().phase;
     if phase == PongPhase::GameOver {
         return;
     }
@@ -189,7 +177,7 @@ fn apply_input(world: &mut World, _dt: f32) {
     let p1_input = world.input.bits;
     let p2_input = compute_ai_input(world);
     let inputs = [p1_input, p2_input];
-    let paddles = pong_ref(world).paddles;
+    let paddles = world.resource::<PongState>().paddles;
 
     for (idx, &input_bits) in inputs.iter().enumerate() {
         let up = (input_bits & INPUT_UP) != 0;
@@ -201,13 +189,13 @@ fn apply_input(world: &mut World, _dt: f32) {
 }
 
 fn move_entities(world: &mut World, dt: f32) {
-    let phase = pong_ref(world).phase;
+    let phase = world.resource::<PongState>().phase;
     if phase == PongPhase::GameOver {
         return;
     }
 
-    let ball = pong_ref(world).ball;
-    let paddles = pong_ref(world).paddles;
+    let ball = world.resource::<PongState>().ball;
+    let paddles = world.resource::<PongState>().paddles;
     if ball_visible(world) {
         let ball_vel = world.velocity(ball);
         let vx = ball_vel.x;
@@ -247,13 +235,13 @@ fn check_paddle_collision(ball_x: f32, ball_y: f32, paddle_x: f32, paddle_y: f32
 }
 
 fn collide_paddles(world: &mut World) {
-    let phase = pong_ref(world).phase;
+    let phase = world.resource::<PongState>().phase;
     if phase == PongPhase::GameOver || !ball_visible(world) {
         return;
     }
 
-    let paddles = pong_ref(world).paddles;
-    let ball = pong_ref(world).ball;
+    let paddles = world.resource::<PongState>().paddles;
+    let ball = world.resource::<PongState>().ball;
     let paddle_positions = [PADDLE1_X, PADDLE2_X];
 
     for (i, &paddle_x) in paddle_positions.iter().enumerate() {
@@ -301,19 +289,19 @@ fn collide_paddles(world: &mut World) {
 }
 
 fn collide_walls(world: &mut World) {
-    if pong_ref(world).phase == PongPhase::GameOver || !ball_visible(world) {
+    if world.resource::<PongState>().phase == PongPhase::GameOver || !ball_visible(world) {
         return;
     }
 
-    let ball = pong_ref(world).ball;
+    let ball = world.resource::<PongState>().ball;
     let ball_transform = world.transform(ball);
     let ball_x = ball_transform.x;
     let ball_y = ball_transform.y;
 
     if ball_x - BALL_RADIUS <= 0.0 {
-        pong_mut(world).conceded_by = Some(PongPlayer::One);
+        world.resource_mut::<PongState>().conceded_by = Some(PongPlayer::One);
     } else if ball_x + BALL_RADIUS >= world.field.width {
-        pong_mut(world).conceded_by = Some(PongPlayer::Two);
+        world.resource_mut::<PongState>().conceded_by = Some(PongPlayer::Two);
     }
 
     if ball_y - BALL_RADIUS <= 0.0 || ball_y + BALL_RADIUS >= world.field.height {
@@ -325,7 +313,7 @@ fn collide_walls(world: &mut World) {
 }
 
 fn resolve_scoring(world: &mut World) {
-    let conceder = match pong_ref(world).conceded_by {
+    let conceder = match world.resource::<PongState>().conceded_by {
         Some(player) => player,
         None => return,
     };
@@ -335,7 +323,7 @@ fn resolve_scoring(world: &mut World) {
         PongPlayer::Two => PongPlayer::One,
     };
 
-    let pong = pong_mut(world);
+    let pong = world.resource_mut::<PongState>();
     match scorer {
         PongPlayer::One => pong.player_one_score += 1,
         PongPlayer::Two => pong.player_two_score += 1,
@@ -359,7 +347,7 @@ fn resolve_scoring(world: &mut World) {
 }
 
 fn handle_restart(world: &mut World, _dt: f32) {
-    if pong_ref(world).phase != PongPhase::GameOver {
+    if world.resource::<PongState>().phase != PongPhase::GameOver {
         return;
     }
     if (world.input.bits & INPUT_ACTION) != 0 {
@@ -368,7 +356,7 @@ fn handle_restart(world: &mut World, _dt: f32) {
 }
 
 fn tick_serve(world: &mut World, dt: f32) {
-    let phase = pong_ref(world).phase;
+    let phase = world.resource::<PongState>().phase;
     if phase != PongPhase::Playing {
         return;
     }
@@ -378,7 +366,7 @@ fn tick_serve(world: &mut World, dt: f32) {
 }
 
 fn apply_physics(world: &mut World, dt: f32) {
-    let phase = pong_ref(world).phase;
+    let phase = world.resource::<PongState>().phase;
     if phase == PongPhase::GameOver {
         return;
     }
@@ -455,7 +443,7 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
 fn write_snapshot(world: &World, snapshot: &mut [f32]) {
     use SnapshotField::*;
 
-    let pong = pong_ref(world);
+    let pong = world.resource::<PongState>();
     let ball = pong.ball;
     let ball_visible = pong.ball_visible();
 

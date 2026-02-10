@@ -172,16 +172,20 @@ impl World {
         self.resources.insert(TypeId::of::<T>(), Box::new(value));
     }
 
-    pub fn get_resource<T: Any>(&self) -> Option<&T> {
+    pub fn resource<T: Any + 'static>(&self) -> &T {
+        let type_name = std::any::type_name::<T>();
         self.resources
             .get(&TypeId::of::<T>())
             .and_then(|boxed| boxed.downcast_ref::<T>())
+            .unwrap_or_else(|| panic!("resource {} not found", type_name))
     }
 
-    pub fn get_resource_mut<T: Any>(&mut self) -> Option<&mut T> {
+    pub fn resource_mut<T: Any + 'static>(&mut self) -> &mut T {
+        let type_name = std::any::type_name::<T>();
         self.resources
             .get_mut(&TypeId::of::<T>())
             .and_then(|boxed| boxed.downcast_mut::<T>())
+            .unwrap_or_else(|| panic!("resource {} not found", type_name))
     }
 
     fn ensure_capacity(&mut self, idx: usize) {

@@ -19,9 +19,7 @@ struct ArkanoidState {
 }
 
 fn apply_input(world: &mut World, _dt: f32) {
-    let &ArkanoidState { paddle, .. } = world
-        .get_resource::<ArkanoidState>()
-        .expect("apply_input requires ArkanoidState");
+    let &ArkanoidState { paddle, .. } = world.resource::<ArkanoidState>();
 
     let input_bits = world.input.bits;
     let left = (input_bits & INPUT_LEFT) != 0;
@@ -32,9 +30,7 @@ fn apply_input(world: &mut World, _dt: f32) {
 }
 
 fn apply_physics(world: &mut World, dt: f32) {
-    let &ArkanoidState { paddle, ball } = world
-        .get_resource::<ArkanoidState>()
-        .expect("apply_physics requires ArkanoidState");
+    let &ArkanoidState { paddle, ball } = world.resource::<ArkanoidState>();
 
     let paddle_vx = world.velocity(paddle).x;
     let field_width = world.field.width;
@@ -143,9 +139,7 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
 fn write_snapshot(world: &World, snapshot: &mut [f32]) {
     use SnapshotField::*;
 
-    let &ArkanoidState { paddle, ball } = world
-        .get_resource::<ArkanoidState>()
-        .expect("arkanoid snapshot requires ArkanoidState");
+    let &ArkanoidState { paddle, ball } = world.resource::<ArkanoidState>();
 
     let paddle_transform = world.transform(paddle);
     snapshot[PaddleX.idx()] = paddle_transform.x;
