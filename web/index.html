@@ -29,6 +29,7 @@
     <script type="module">
         import init, { engine_init, engine_step, game_state_ptr, game_state_len } from './dist/gamedev_wasm_hello.js';
         import { setDebugState } from './app.js';
+        import { createInputHandler } from './input.js';
 
         const PHASE_GAME_OVER = 1.0;
         const WINNER_PLAYER_ONE = 1.0;
@@ -56,37 +57,10 @@
         let lastDisplayUpdate = 0;
         let wasmModule;
 
-        const keys = {
-            p1_up: false,
-            p1_down: false,
-            action: false
-        };
-
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
-                keys.p1_up = true;
-                e.preventDefault();
-            }
-            if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
-                keys.p1_down = true;
-                e.preventDefault();
-            }
-            if (e.key === ' ') {
-                keys.action = true;
-                e.preventDefault();
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
-                keys.p1_up = false;
-            }
-            if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
-                keys.p1_down = false;
-            }
-            if (e.key === ' ') {
-                keys.action = false;
-            }
+        const keys = createInputHandler({
+            p1_up: ['w', 'W', 'ArrowUp'],
+            p1_down: ['s', 'S', 'ArrowDown'],
+            action: [' ']
         });
 
         async function run() {

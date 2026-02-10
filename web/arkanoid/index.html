@@ -16,6 +16,7 @@
             game_state_ptr,
             game_state_len,
         } from '../dist/gamedev_wasm_hello.js';
+        import { createInputHandler } from '../input.js';
 
         const SNAP = Object.freeze({
             PADDLE_X: 0,
@@ -26,29 +27,9 @@
 
         let lastTime = 0;
 
-        const keys = {
-            left: false,
-            right: false,
-        };
-
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-                keys.left = true;
-                e.preventDefault();
-            }
-            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-                keys.right = true;
-                e.preventDefault();
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-                keys.left = false;
-            }
-            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-                keys.right = false;
-            }
+        const keys = createInputHandler({
+            left: ['ArrowLeft', 'a', 'A'],
+            right: ['ArrowRight', 'd', 'D']
         });
 
         async function run() {
