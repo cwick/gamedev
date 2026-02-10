@@ -23,6 +23,9 @@
             PADDLE_Y: 1,
             PADDLE_WIDTH: 2,
             PADDLE_HEIGHT: 3,
+            BALL_X: 4,
+            BALL_Y: 5,
+            BALL_SIZE: 6,
         });
 
         let lastTime = 0;
@@ -53,7 +56,7 @@
 
                 const statePtr = game_state_ptr();
                 const stateLen = game_state_len();
-                if (statePtr !== 0 && stateLen >= SNAP.PADDLE_HEIGHT + 1) {
+                if (statePtr !== 0 && stateLen >= SNAP.BALL_SIZE + 1) {
                     const snapshot = new Float32Array(
                         wasmModule.memory.buffer,
                         statePtr,
@@ -63,12 +66,18 @@
                     const paddleY = snapshot[SNAP.PADDLE_Y];
                     const paddleWidth = snapshot[SNAP.PADDLE_WIDTH];
                     const paddleHeight = snapshot[SNAP.PADDLE_HEIGHT];
+                    const ballX = snapshot[SNAP.BALL_X];
+                    const ballY = snapshot[SNAP.BALL_Y];
+                    const ballSize = snapshot[SNAP.BALL_SIZE];
 
                     ctx.fillStyle = '#000000';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                     ctx.fillStyle = '#00ffcc';
                     ctx.fillRect(paddleX - paddleWidth / 2, paddleY - paddleHeight / 2, paddleWidth, paddleHeight);
+
+                    ctx.fillStyle = '#ffff00';
+                    ctx.fillRect(ballX - ballSize / 2, ballY - ballSize / 2, ballSize, ballSize);
                 }
 
                 requestAnimationFrame(gameLoop);
