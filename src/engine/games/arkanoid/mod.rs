@@ -2,6 +2,7 @@ use crate::engine::ecs::components::{Collider, Renderable, Transform, Velocity};
 use crate::engine::ecs::entity::EntityId;
 use crate::engine::ecs::schedule::Schedule;
 use crate::engine::ecs::world::World;
+use crate::engine::systems::integrate_velocity;
 use crate::engine::{Snapshot, INPUT_LEFT, INPUT_RIGHT};
 
 const PADDLE_WIDTH: f32 = 96.0;
@@ -30,30 +31,19 @@ fn apply_input(world: &mut World, _dt: f32) {
 }
 
 fn apply_physics(world: &mut World, dt: f32) {
-    move_paddle(world, dt);
-    move_ball(world, dt);
+    integrate_velocity(world, dt);
+    clamp_paddle_to_field(world);
     collide_ball(world);
 }
 
-fn move_paddle(world: &mut World, dt: f32) {
+fn clamp_paddle_to_field(world: &mut World) {
     let &ArkanoidState { paddle, .. } = world.resource::<ArkanoidState>();
-    let paddle_vx = world.velocity(paddle).x;
     let field_width = world.field.width;
-    world.transform_mut(paddle).x += paddle_vx * dt;
-
     let paddle_half_width = PADDLE_WIDTH / 2.0;
     let min_x = paddle_half_width;
     let max_x = field_width - paddle_half_width;
     let paddle_transform = world.transform_mut(paddle);
     paddle_transform.x = paddle_transform.x.clamp(min_x, max_x);
-}
-
-fn move_ball(world: &mut World, dt: f32) {
-    let &ArkanoidState { ball, .. } = world.resource::<ArkanoidState>();
-    let ball_vx = world.velocity(ball).x;
-    let ball_vy = world.velocity(ball).y;
-    world.transform_mut(ball).x += ball_vx * dt;
-    world.transform_mut(ball).y += ball_vy * dt;
 }
 
 fn collide_ball(world: &mut World) {

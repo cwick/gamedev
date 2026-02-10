@@ -1,10 +1,11 @@
 use rand::Rng;
 
 use crate::engine::ecs::components::{Spin, Transform, Velocity};
-use crate::engine::{clamp_dt, INPUT_ACTION, INPUT_DOWN, INPUT_UP};
+use crate::engine::{INPUT_ACTION, INPUT_DOWN, INPUT_UP};
 pub mod resources;
 use crate::engine::ecs::schedule::Schedule;
 use crate::engine::ecs::world::World;
+use crate::engine::systems::integrate_velocity;
 use crate::engine::Snapshot;
 pub use resources::{PongPhase, PongPlayer, PongState};
 
@@ -194,28 +195,20 @@ fn move_entities(world: &mut World, dt: f32) {
         return;
     }
 
-    let ball = world.resource::<PongState>().ball;
-    let paddles = world.resource::<PongState>().paddles;
+    integrate_velocity(world, dt);
+
     if ball_visible(world) {
-        let ball_vel = world.velocity(ball);
-        let vx = ball_vel.x;
-        let vy = ball_vel.y;
+        let ball = world.resource::<PongState>().ball;
         let sv = world.spin(ball).value;
-
-        let ball_transform = world.transform_mut(ball);
-        ball_transform.x += vx * dt;
-        ball_transform.y += vy * dt;
-
         world.velocity_mut(ball).y += sv * dt;
         world.spin_mut(ball).value *= SPIN_DECAY_RATE.powf(dt);
     }
 
     let paddle_half_height = PADDLE_HEIGHT / 2.0;
     let max_paddle_y = world.field.height - paddle_half_height;
+    let paddles = world.resource::<PongState>().paddles;
     for &paddle in &paddles {
-        let vy = world.velocity(paddle).y;
         let paddle_transform = world.transform_mut(paddle);
-        paddle_transform.y += vy * dt;
         paddle_transform.y = paddle_transform.y.clamp(paddle_half_height, max_paddle_y);
     }
 }
@@ -370,7 +363,6 @@ fn apply_physics(world: &mut World, dt: f32) {
     if phase == PongPhase::GameOver {
         return;
     }
-    let dt = clamp_dt(dt);
     move_entities(world, dt);
     if ball_visible(world) {
         collide_paddles(world);

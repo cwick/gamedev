@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 pub mod ecs;
+pub mod systems;
 
 use crate::engine::ecs::schedule::Schedule;
 use crate::engine::ecs::world::World;
@@ -22,7 +23,7 @@ pub struct GameDefinition {
     pub name: &'static str,
 }
 
-pub fn clamp_dt(dt_seconds: f32) -> f32 {
+fn clamp_dt(dt_seconds: f32) -> f32 {
     dt_seconds.clamp(0.0, MAX_DT)
 }
 

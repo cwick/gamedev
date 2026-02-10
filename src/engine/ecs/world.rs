@@ -1,6 +1,5 @@
 use super::components::{Collider, Renderable, Spin, Transform, Velocity};
 use super::entity::{EntityAllocator, EntityId};
-use super::query::QueryIter;
 use super::resources::{FieldBounds, InputBits};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
@@ -164,10 +163,6 @@ impl World {
             .expect("spin component missing")
     }
 
-    pub fn query_transform_velocity(&self) -> QueryIter<'_, Transform, Velocity> {
-        QueryIter::new(&self.transforms, &self.velocities)
-    }
-
     pub fn insert_resource<T: Any>(&mut self, value: T) {
         self.resources.insert(TypeId::of::<T>(), Box::new(value));
     }
@@ -258,23 +253,5 @@ mod tests {
         world.despawn(entity);
 
         world.transform(entity); // Should panic
-    }
-
-    #[test]
-    fn query_transform_velocity_returns_only_complete_pairs() {
-        let mut world = World::new(800.0, 600.0);
-        let full = world.spawn();
-        world.set_transform(full, Transform { x: 0.0, y: 0.0 });
-        world.set_velocity(full, Velocity { x: 1.0, y: 1.0 });
-
-        let partial = world.spawn();
-        world.set_transform(partial, Transform { x: 2.0, y: 2.0 });
-
-        let ids: Vec<u32> = world
-            .query_transform_velocity()
-            .map(|(entity, _, _)| entity.0)
-            .collect();
-
-        assert_eq!(ids, vec![full.0]);
     }
 }
