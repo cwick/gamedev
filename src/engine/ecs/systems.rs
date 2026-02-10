@@ -1,4 +1,4 @@
-use crate::engine::ecs::world::World;
+use super::world::World;
 
 pub fn integrate_velocity(world: &mut World, dt: f32) {
     let (transforms, velocities) = (&mut world.transforms, &world.velocities);
@@ -14,8 +14,8 @@ pub fn integrate_velocity(world: &mut World, dt: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::ecs::components::{Transform, Velocity};
-    use crate::engine::ecs::world::World;
+    use super::super::components::{Transform, Velocity};
+    use super::super::world::World;
 
     #[test]
     fn moves_entities_with_both_components() {

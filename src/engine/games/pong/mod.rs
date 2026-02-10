@@ -5,7 +5,7 @@ use crate::engine::{INPUT_ACTION, INPUT_DOWN, INPUT_UP};
 pub mod resources;
 use crate::engine::ecs::schedule::Schedule;
 use crate::engine::ecs::world::World;
-use crate::engine::systems::integrate_velocity;
+use crate::engine::ecs::systems::integrate_velocity;
 use crate::engine::Snapshot;
 pub use resources::{PongPhase, PongPlayer, PongState};
 

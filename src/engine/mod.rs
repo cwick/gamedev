@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 pub mod ecs;
-pub mod systems;
 
 use crate::engine::ecs::schedule::Schedule;
 use crate::engine::ecs::world::World;

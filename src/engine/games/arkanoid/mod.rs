@@ -2,7 +2,7 @@ use crate::engine::ecs::components::{Collider, Renderable, Transform, Velocity};
 use crate::engine::ecs::entity::EntityId;
 use crate::engine::ecs::schedule::Schedule;
 use crate::engine::ecs::world::World;
-use crate::engine::systems::integrate_velocity;
+use crate::engine::ecs::systems::integrate_velocity;
 use crate::engine::{Snapshot, INPUT_LEFT, INPUT_RIGHT};
 
 const PADDLE_WIDTH: f32 = 96.0;
