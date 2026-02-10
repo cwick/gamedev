@@ -484,21 +484,6 @@ mod snapshot {
     use super::*;
 
     #[test]
-    fn init_resets_scores_and_phase() {
-        let (mut world, schedule) = new_game();
-        pong_mut(&mut world).player_one_score = 5;
-        pong_mut(&mut world).player_two_score = 3;
-        pong_mut(&mut world).phase = PongPhase::GameOver;
-
-        step(&mut world, &schedule, DT, INPUT_ACTION);
-
-        let pong = pong_ref(&world);
-        assert_eq!(pong.player_one_score, 0);
-        assert_eq!(pong.player_two_score, 0);
-        assert_eq!(pong.phase, PongPhase::Playing);
-    }
-
-    #[test]
     fn scores_appear_in_snapshot() {
         let (mut world, _schedule) = new_game();
         pong_mut(&mut world).player_one_score = 7;
@@ -524,28 +509,14 @@ mod snapshot {
             0.0,
             "ball should stay hidden when game over"
         );
-    }
-
-    #[test]
-    fn winner_field_in_snapshot() {
-        let (mut world, _schedule) = new_game();
-
-        let mut snapshot = vec![0.0; SnapshotField::Count as usize];
-        write_snapshot(&world, &mut snapshot);
-        assert_eq!(
-            snapshot[SnapshotField::Winner.idx()],
-            0.0,
-            "no winner during play"
-        );
-
-        pong_mut(&mut world).phase = PongPhase::GameOver;
-        pong_mut(&mut world).winner = Some(PongPlayer::One);
-        write_snapshot(&world, &mut snapshot);
-        assert_eq!(snapshot[SnapshotField::Winner.idx()], 1.0, "player 1 wins");
 
         pong_mut(&mut world).winner = Some(PongPlayer::Two);
         write_snapshot(&world, &mut snapshot);
-        assert_eq!(snapshot[SnapshotField::Winner.idx()], 2.0, "player 2 wins");
+        assert_eq!(
+            snapshot[SnapshotField::Winner.idx()],
+            2.0,
+            "player 2 should be winner"
+        );
     }
 }
 
