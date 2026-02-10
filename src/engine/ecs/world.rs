@@ -84,6 +84,86 @@ impl World {
         self.spins[entity.0 as usize] = Some(value);
     }
 
+    pub fn transform(&self, entity: EntityId) -> &Transform {
+        let idx = entity.0 as usize;
+        self.transforms
+            .get(idx)
+            .and_then(|opt| opt.as_ref())
+            .expect("transform component missing")
+    }
+
+    pub fn transform_mut(&mut self, entity: EntityId) -> &mut Transform {
+        let idx = entity.0 as usize;
+        self.transforms
+            .get_mut(idx)
+            .and_then(|opt| opt.as_mut())
+            .expect("transform component missing")
+    }
+
+    pub fn velocity(&self, entity: EntityId) -> &Velocity {
+        let idx = entity.0 as usize;
+        self.velocities
+            .get(idx)
+            .and_then(|opt| opt.as_ref())
+            .expect("velocity component missing")
+    }
+
+    pub fn velocity_mut(&mut self, entity: EntityId) -> &mut Velocity {
+        let idx = entity.0 as usize;
+        self.velocities
+            .get_mut(idx)
+            .and_then(|opt| opt.as_mut())
+            .expect("velocity component missing")
+    }
+
+    pub fn collider(&self, entity: EntityId) -> &Collider {
+        let idx = entity.0 as usize;
+        self.colliders
+            .get(idx)
+            .and_then(|opt| opt.as_ref())
+            .expect("collider component missing")
+    }
+
+    pub fn collider_mut(&mut self, entity: EntityId) -> &mut Collider {
+        let idx = entity.0 as usize;
+        self.colliders
+            .get_mut(idx)
+            .and_then(|opt| opt.as_mut())
+            .expect("collider component missing")
+    }
+
+    pub fn renderable(&self, entity: EntityId) -> &Renderable {
+        let idx = entity.0 as usize;
+        self.renderables
+            .get(idx)
+            .and_then(|opt| opt.as_ref())
+            .expect("renderable component missing")
+    }
+
+    pub fn renderable_mut(&mut self, entity: EntityId) -> &mut Renderable {
+        let idx = entity.0 as usize;
+        self.renderables
+            .get_mut(idx)
+            .and_then(|opt| opt.as_mut())
+            .expect("renderable component missing")
+    }
+
+    pub fn spin(&self, entity: EntityId) -> &Spin {
+        let idx = entity.0 as usize;
+        self.spins
+            .get(idx)
+            .and_then(|opt| opt.as_ref())
+            .expect("spin component missing")
+    }
+
+    pub fn spin_mut(&mut self, entity: EntityId) -> &mut Spin {
+        let idx = entity.0 as usize;
+        self.spins
+            .get_mut(idx)
+            .and_then(|opt| opt.as_mut())
+            .expect("spin component missing")
+    }
+
     pub fn query_transform_velocity(&self) -> QueryIter<'_, Transform, Velocity> {
         QueryIter::new(&self.transforms, &self.velocities)
     }
@@ -143,6 +223,28 @@ mod tests {
     }
 
     #[test]
+    fn get_component_returns_what_was_set() {
+        let mut world = World::new(800.0, 600.0);
+        let entity = world.spawn();
+        let transform = Transform { x: 1.0, y: 2.0 };
+        world.set_transform(entity, transform);
+
+        assert_eq!(world.transform(entity), &transform);
+    }
+
+    #[test]
+    fn get_component_mut_allows_modification() {
+        let mut world = World::new(800.0, 600.0);
+        let entity = world.spawn();
+        world.set_velocity(entity, Velocity { x: 1.0, y: 2.0 });
+
+        world.velocity_mut(entity).x = 5.0;
+
+        assert_eq!(world.velocity(entity), &Velocity { x: 5.0, y: 2.0 });
+    }
+
+    #[test]
+    #[should_panic(expected = "transform component missing")]
     fn despawn_clears_component_slots() {
         let mut world = World::new(800.0, 600.0);
         let entity = world.spawn();
@@ -151,9 +253,7 @@ mod tests {
 
         world.despawn(entity);
 
-        let idx = entity.0 as usize;
-        assert!(world.transforms[idx].is_none());
-        assert!(world.velocities[idx].is_none());
+        world.transform(entity); // Should panic
     }
 
     #[test]

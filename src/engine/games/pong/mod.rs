@@ -85,26 +85,16 @@ fn reset_game(world: &mut World) {
     let paddle_mid = height / 2.0;
     let paddles = pong_ref(world).paddles;
     for &paddle in &paddles {
-        if let Some(transform) = world.transforms[paddle.0 as usize].as_mut() {
-            transform.y = paddle_mid;
-        }
-        if let Some(velocity) = world.velocities[paddle.0 as usize].as_mut() {
-            velocity.y = 0.0;
-        }
+        world.transform_mut(paddle).y = paddle_mid;
+        world.velocity_mut(paddle).y = 0.0;
     }
 
     let ball = pong_ref(world).ball;
-    if let Some(transform) = world.transforms[ball.0 as usize].as_mut() {
-        transform.x = width / 2.0;
-        transform.y = height / 2.0;
-    }
-    if let Some(velocity) = world.velocities[ball.0 as usize].as_mut() {
-        velocity.x = 0.0;
-        velocity.y = 0.0;
-    }
-    if let Some(spin) = world.spins[ball.0 as usize].as_mut() {
-        spin.value = 0.0;
-    }
+    world.transform_mut(ball).x = width / 2.0;
+    world.transform_mut(ball).y = height / 2.0;
+    world.velocity_mut(ball).x = 0.0;
+    world.velocity_mut(ball).y = 0.0;
+    world.spin_mut(ball).value = 0.0;
 
     launch_ball(world);
 }
@@ -115,17 +105,11 @@ fn center_ball(world: &mut World, side: f32) {
     let pong = pong_mut(world);
     let ball = pong.ball;
 
-    if let Some(transform) = world.transforms[ball.0 as usize].as_mut() {
-        transform.x = width / 2.0 + width * 0.1 * side;
-        transform.y = height / 2.0;
-    }
-    if let Some(velocity) = world.velocities[ball.0 as usize].as_mut() {
-        velocity.x = 0.0;
-        velocity.y = 0.0;
-    }
-    if let Some(spin) = world.spins[ball.0 as usize].as_mut() {
-        spin.value = 0.0;
-    }
+    world.transform_mut(ball).x = width / 2.0 + width * 0.1 * side;
+    world.transform_mut(ball).y = height / 2.0;
+    world.velocity_mut(ball).x = 0.0;
+    world.velocity_mut(ball).y = 0.0;
+    world.spin_mut(ball).value = 0.0;
 }
 
 fn launch_ball(world: &mut World) {
@@ -157,10 +141,9 @@ fn launch_ball(world: &mut World) {
     center_ball(world, launch_side);
 
     let ball = pong_ref(world).ball;
-    if let Some(velocity) = world.velocities[ball.0 as usize].as_mut() {
-        velocity.x = angle.cos() * speed;
-        velocity.y = angle.sin() * speed;
-    }
+    let velocity = world.velocity_mut(ball);
+    velocity.x = angle.cos() * speed;
+    velocity.y = angle.sin() * speed;
     pong_mut(world).serve_delay_remaining = 0.0;
 }
 
@@ -184,14 +167,8 @@ fn ball_visible(world: &World) -> bool {
 
 fn compute_ai_input(world: &World) -> u32 {
     let pong = pong_ref(world);
-    let ball_y = world.transforms[pong.ball.0 as usize]
-        .as_ref()
-        .map(|t| t.y)
-        .unwrap_or(0.0);
-    let paddle_y = world.transforms[pong.paddles[1].0 as usize]
-        .as_ref()
-        .map(|t| t.y)
-        .unwrap_or(0.0);
+    let ball_y = world.transform(pong.ball).y;
+    let paddle_y = world.transform(pong.paddles[1]).y;
     let diff = ball_y - paddle_y;
 
     if diff.abs() < AI_DEAD_ZONE {
@@ -219,9 +196,7 @@ fn apply_input(world: &mut World, _dt: f32) {
         let down = (input_bits & INPUT_DOWN) != 0;
         let dir = (down as i32) - (up as i32);
         let paddle = paddles[idx];
-        if let Some(velocity) = world.velocities[paddle.0 as usize].as_mut() {
-            velocity.y = dir as f32 * PADDLE_SPEED;
-        }
+        world.velocity_mut(paddle).y = dir as f32 * PADDLE_SPEED;
     }
 }
 
@@ -234,30 +209,26 @@ fn move_entities(world: &mut World, dt: f32) {
     let ball = pong_ref(world).ball;
     let paddles = pong_ref(world).paddles;
     if ball_visible(world) {
-        if let (Some(transform), Some(velocity)) = (
-            world.transforms[ball.0 as usize].as_mut(),
-            world.velocities[ball.0 as usize].as_mut(),
-        ) {
-            transform.x += velocity.x * dt;
-            transform.y += velocity.y * dt;
-            if let Some(spin) = world.spins[ball.0 as usize].as_mut() {
-                velocity.y += spin.value * dt;
-                spin.value *= SPIN_DECAY_RATE.powf(dt);
-            }
-        }
+        let ball_vel = world.velocity(ball);
+        let vx = ball_vel.x;
+        let vy = ball_vel.y;
+        let sv = world.spin(ball).value;
+
+        let ball_transform = world.transform_mut(ball);
+        ball_transform.x += vx * dt;
+        ball_transform.y += vy * dt;
+
+        world.velocity_mut(ball).y += sv * dt;
+        world.spin_mut(ball).value *= SPIN_DECAY_RATE.powf(dt);
     }
 
     let paddle_half_height = PADDLE_HEIGHT / 2.0;
+    let max_paddle_y = world.field.height - paddle_half_height;
     for &paddle in &paddles {
-        if let (Some(transform), Some(velocity)) = (
-            world.transforms[paddle.0 as usize].as_mut(),
-            world.velocities[paddle.0 as usize].as_mut(),
-        ) {
-            transform.y += velocity.y * dt;
-            transform.y = transform
-                .y
-                .clamp(paddle_half_height, world.field.height - paddle_half_height);
-        }
+        let vy = world.velocity(paddle).y;
+        let paddle_transform = world.transform_mut(paddle);
+        paddle_transform.y += vy * dt;
+        paddle_transform.y = paddle_transform.y.clamp(paddle_half_height, max_paddle_y);
     }
 }
 
@@ -287,56 +258,44 @@ fn collide_paddles(world: &mut World) {
 
     for (i, &paddle_x) in paddle_positions.iter().enumerate() {
         let paddle_entity = paddles[i];
-        let paddle_y = world.transforms[paddle_entity.0 as usize]
-            .as_ref()
-            .map(|t| t.y)
-            .unwrap_or(0.0);
+        let paddle_y = world.transform(paddle_entity).y;
 
-        let (ball_x, ball_y) = world.transforms[ball.0 as usize]
-            .as_ref()
-            .map(|t| (t.x, t.y))
-            .unwrap_or((0.0, 0.0));
+        let ball_transform = world.transform(ball);
+        let ball_x = ball_transform.x;
+        let ball_y = ball_transform.y;
 
         if !check_paddle_collision(ball_x, ball_y, paddle_x, paddle_y) {
             continue;
         }
 
-        let (ball_velocity_x, ball_velocity_y) = world.velocities[ball.0 as usize]
-            .as_ref()
-            .map(|v| (v.x, v.y))
-            .unwrap_or((0.0, 0.0));
+        let ball_velocity = world.velocity(ball);
         let speed =
-            (ball_velocity_x.hypot(ball_velocity_y) * BALL_SPEED_ACCEL_FACTOR).min(BALL_MAX_SPEED);
+            (ball_velocity.x.hypot(ball_velocity.y) * BALL_SPEED_ACCEL_FACTOR).min(BALL_MAX_SPEED);
         let paddle_half_h = PADDLE_HEIGHT / 2.0;
         let offset = ((ball_y - paddle_y) / paddle_half_h).clamp(-1.0, 1.0);
         let angle = offset * MAX_BOUNCE_ANGLE;
         let direction = if i == 0 { 1.0_f32 } else { -1.0 };
 
-        if let Some(velocity) = world.velocities[ball.0 as usize].as_mut() {
-            velocity.x = direction * speed * angle.cos();
-            velocity.y = speed * angle.sin();
-        }
+        let ball_vel_mut = world.velocity_mut(ball);
+        ball_vel_mut.x = direction * speed * angle.cos();
+        ball_vel_mut.y = speed * angle.sin();
 
-        if let (Some(spin), Some(paddle_velocity)) = (
-            world.spins[ball.0 as usize].as_mut(),
-            world.velocities[paddle_entity.0 as usize].as_ref(),
-        ) {
-            let spin_transfer = -paddle_velocity.y * SPIN_TRANSFER_RATE;
-            spin.value = (spin.value + spin_transfer).clamp(-SPIN_MAX, SPIN_MAX);
-        }
+        let paddle_y_vel = world.velocity(paddle_entity).y;
+        let spin_transfer = -paddle_y_vel * SPIN_TRANSFER_RATE;
+        let ball_spin = world.spin_mut(ball);
+        ball_spin.value = (ball_spin.value + spin_transfer).clamp(-SPIN_MAX, SPIN_MAX);
 
         let paddle_top = paddle_y - paddle_half_h;
         let paddle_bottom = paddle_y + paddle_half_h;
         let is_face_hit = ball_y >= paddle_top && ball_y <= paddle_bottom;
 
-        if let Some(transform) = world.transforms[ball.0 as usize].as_mut() {
-            if is_face_hit {
-                transform.x = paddle_x + direction * (PADDLE_WIDTH / 2.0 + BALL_RADIUS);
-            } else if ball_y < paddle_top {
-                transform.y = paddle_top - BALL_RADIUS;
-            } else {
-                transform.y = paddle_bottom + BALL_RADIUS;
-            }
+        let ball_transform = world.transform_mut(ball);
+        if is_face_hit {
+            ball_transform.x = paddle_x + direction * (PADDLE_WIDTH / 2.0 + BALL_RADIUS);
+        } else if ball_y < paddle_top {
+            ball_transform.y = paddle_top - BALL_RADIUS;
+        } else {
+            ball_transform.y = paddle_bottom + BALL_RADIUS;
         }
     }
 }
@@ -347,10 +306,9 @@ fn collide_walls(world: &mut World) {
     }
 
     let ball = pong_ref(world).ball;
-    let (ball_x, ball_y) = world.transforms[ball.0 as usize]
-        .as_ref()
-        .map(|t| (t.x, t.y))
-        .unwrap_or((0.0, 0.0));
+    let ball_transform = world.transform(ball);
+    let ball_x = ball_transform.x;
+    let ball_y = ball_transform.y;
 
     if ball_x - BALL_RADIUS <= 0.0 {
         pong_mut(world).conceded_by = Some(PongPlayer::One);
@@ -359,17 +317,10 @@ fn collide_walls(world: &mut World) {
     }
 
     if ball_y - BALL_RADIUS <= 0.0 || ball_y + BALL_RADIUS >= world.field.height {
-        if let Some(velocity) = world.velocities[ball.0 as usize].as_mut() {
-            velocity.y = -velocity.y;
-        }
-        if let Some(spin) = world.spins[ball.0 as usize].as_mut() {
-            spin.value = -spin.value;
-        }
-        if let Some(transform) = world.transforms[ball.0 as usize].as_mut() {
-            transform.y = transform
-                .y
-                .clamp(BALL_RADIUS, world.field.height - BALL_RADIUS);
-        }
+        world.velocity_mut(ball).y = -world.velocity_mut(ball).y;
+        world.spin_mut(ball).value = -world.spin_mut(ball).value;
+        let max_y = world.field.height - BALL_RADIUS;
+        world.transform_mut(ball).y = world.transform_mut(ball).y.clamp(BALL_RADIUS, max_y);
     }
 }
 
@@ -508,29 +459,17 @@ fn write_snapshot(world: &World, snapshot: &mut [f32]) {
     let ball = pong.ball;
     let ball_visible = pong.ball_visible();
 
-    let (ball_x, ball_y) = world.transforms[ball.0 as usize]
-        .as_ref()
-        .map(|t| (t.x, t.y))
-        .unwrap_or((0.0, 0.0));
-    let (ball_vx, ball_vy) = world.velocities[ball.0 as usize]
-        .as_ref()
-        .map(|v| (v.x, v.y))
-        .unwrap_or((0.0, 0.0));
+    let ball_transform = world.transform(ball);
+    let ball_velocity = world.velocity(ball);
 
-    snapshot[BallX.idx()] = ball_x;
-    snapshot[BallY.idx()] = ball_y;
-    snapshot[BallVx.idx()] = ball_vx;
-    snapshot[BallVy.idx()] = ball_vy;
+    snapshot[BallX.idx()] = ball_transform.x;
+    snapshot[BallY.idx()] = ball_transform.y;
+    snapshot[BallVx.idx()] = ball_velocity.x;
+    snapshot[BallVy.idx()] = ball_velocity.y;
     snapshot[Paddle1X.idx()] = PADDLE1_X;
-    snapshot[Paddle1Y.idx()] = world.transforms[pong.paddles[0].0 as usize]
-        .as_ref()
-        .map(|t| t.y)
-        .unwrap_or(0.0);
+    snapshot[Paddle1Y.idx()] = world.transform(pong.paddles[0]).y;
     snapshot[Paddle2X.idx()] = PADDLE2_X;
-    snapshot[Paddle2Y.idx()] = world.transforms[pong.paddles[1].0 as usize]
-        .as_ref()
-        .map(|t| t.y)
-        .unwrap_or(0.0);
+    snapshot[Paddle2Y.idx()] = world.transform(pong.paddles[1]).y;
     snapshot[PlayerOneScore.idx()] = pong.player_one_score as f32;
     snapshot[PlayerTwoScore.idx()] = pong.player_two_score as f32;
     snapshot[FieldWidth.idx()] = world.field.width;

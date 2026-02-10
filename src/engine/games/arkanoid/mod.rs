@@ -54,9 +54,7 @@ fn write_snapshot(world: &World, snapshot: &mut [f32]) {
     let state = world
         .get_resource::<ArkanoidState>()
         .expect("arkanoid snapshot requires ArkanoidState");
-    let transform = world.transforms[state.paddle.0 as usize]
-        .as_ref()
-        .expect("paddle transform missing");
+    let transform = world.transform(state.paddle);
 
     snapshot[SnapshotField::PaddleX.idx()] = transform.x;
     snapshot[SnapshotField::PaddleY.idx()] = transform.y;

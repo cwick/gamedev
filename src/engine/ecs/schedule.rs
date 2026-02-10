@@ -19,10 +19,6 @@ impl Schedule {
         self
     }
 
-    pub fn add_system(&mut self, system: SystemFn) {
-        self.systems.push(system);
-    }
-
     pub fn run(&self, world: &mut World, dt: f32) {
         for system in &self.systems {
             system(world, dt);
