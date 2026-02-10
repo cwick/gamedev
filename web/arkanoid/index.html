@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arkanoid</title>
+</head>
+
+<body>
+    <canvas id="gameCanvas" width="800" height="600" style="display:block;margin:0 auto;background:#000;"></canvas>
+    <script type="module">
+        import init, {
+            engine_init,
+            engine_step,
+            game_state_ptr,
+            game_state_len,
+        } from '../dist/gamedev_wasm_hello.js';
+
+        const SNAP = Object.freeze({
+            PADDLE_X: 0,
+            PADDLE_Y: 1,
+        });
+
+        const DOT_RADIUS = 24;
+        let lastTime = 0;
+
+        async function run() {
+            const wasmModule = await init();
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+
+            engine_init('Arkanoid', 800, 600);
+
+            function gameLoop(currentTimeMs) {
+                const currentTimeSec = currentTimeMs / 1000.0;
+                const deltaTime = lastTime === 0 ? 0 : currentTimeSec - lastTime;
+                lastTime = currentTimeSec;
+
+                if (deltaTime > 0.0) {
+                    engine_step(deltaTime, 0);
+                }
+
+                const statePtr = game_state_ptr();
+                const stateLen = game_state_len();
+                if (statePtr !== 0 && stateLen >= SNAP.PADDLE_Y + 1) {
+                    const snapshot = new Float32Array(
+                        wasmModule.memory.buffer,
+                        statePtr,
+                        stateLen,
+                    );
+                    const paddleX = snapshot[SNAP.PADDLE_X];
+                    const paddleY = snapshot[SNAP.PADDLE_Y];
+
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    ctx.fillStyle = '#00ffcc';
+                    ctx.beginPath();
+                    ctx.arc(paddleX, paddleY, DOT_RADIUS, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                requestAnimationFrame(gameLoop);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        run();
+    </script>
+</body>
+
+</html>

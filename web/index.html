@@ -99,7 +99,7 @@
                 const canvas = document.getElementById('gameCanvas');
                 const ctx = canvas.getContext('2d');
 
-                engine_init(800, 600);
+                engine_init("Pong", 800, 600);
 
                 function gameLoop(currentTime) {
                     const currentTimeSec = currentTime / 1000.0;
@@ -107,7 +107,7 @@
                     lastTime = currentTimeSec;
 
                     if (deltaTime > 0) {
-                        const input_bits = (keys.p1_up ? 0b001 : 0) | (keys.p1_down ? 0b010 : 0) | (keys.action ? 0b100 : 0);
+                        const input_bits = (keys.p1_up ? 0b001 : 0) | (keys.p1_down ? 0b010 : 0) | (keys.action ? 0b0001_0000 : 0);
                         engine_step(deltaTime, input_bits);
                     }
 
