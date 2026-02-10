@@ -7,6 +7,8 @@ use crate::engine::ecs::world::World;
 
 pub const INPUT_UP: u32 = 0b0000_0001;
 pub const INPUT_DOWN: u32 = 0b0000_0010;
+pub const INPUT_LEFT: u32 = 0b0000_0100;
+pub const INPUT_RIGHT: u32 = 0b0000_1000;
 pub const INPUT_ACTION: u32 = 0b0001_0000;
 
 pub const MAX_DT: f32 = 0.05;

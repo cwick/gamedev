@@ -20,10 +20,36 @@
         const SNAP = Object.freeze({
             PADDLE_X: 0,
             PADDLE_Y: 1,
+            PADDLE_WIDTH: 2,
+            PADDLE_HEIGHT: 3,
         });
 
-        const DOT_RADIUS = 24;
         let lastTime = 0;
+
+        const keys = {
+            left: false,
+            right: false,
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                keys.left = true;
+                e.preventDefault();
+            }
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                keys.right = true;
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                keys.left = false;
+            }
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                keys.right = false;
+            }
+        });
 
         async function run() {
             const wasmModule = await init();
@@ -38,12 +64,15 @@
                 lastTime = currentTimeSec;
 
                 if (deltaTime > 0.0) {
-                    engine_step(deltaTime, 0);
+                    const input_bits =
+                        (keys.left ? 0b0100 : 0) |
+                        (keys.right ? 0b1000 : 0);
+                    engine_step(deltaTime, input_bits);
                 }
 
                 const statePtr = game_state_ptr();
                 const stateLen = game_state_len();
-                if (statePtr !== 0 && stateLen >= SNAP.PADDLE_Y + 1) {
+                if (statePtr !== 0 && stateLen >= SNAP.PADDLE_HEIGHT + 1) {
                     const snapshot = new Float32Array(
                         wasmModule.memory.buffer,
                         statePtr,
@@ -51,14 +80,14 @@
                     );
                     const paddleX = snapshot[SNAP.PADDLE_X];
                     const paddleY = snapshot[SNAP.PADDLE_Y];
+                    const paddleWidth = snapshot[SNAP.PADDLE_WIDTH];
+                    const paddleHeight = snapshot[SNAP.PADDLE_HEIGHT];
 
                     ctx.fillStyle = '#000000';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                     ctx.fillStyle = '#00ffcc';
-                    ctx.beginPath();
-                    ctx.arc(paddleX, paddleY, DOT_RADIUS, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.fillRect(paddleX - paddleWidth / 2, paddleY - paddleHeight / 2, paddleWidth, paddleHeight);
                 }
 
                 requestAnimationFrame(gameLoop);
