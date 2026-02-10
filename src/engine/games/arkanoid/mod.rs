@@ -30,8 +30,13 @@ fn apply_input(world: &mut World, _dt: f32) {
 }
 
 fn apply_physics(world: &mut World, dt: f32) {
-    let &ArkanoidState { paddle, ball } = world.resource::<ArkanoidState>();
+    move_paddle(world, dt);
+    move_ball(world, dt);
+    collide_ball(world);
+}
 
+fn move_paddle(world: &mut World, dt: f32) {
+    let &ArkanoidState { paddle, .. } = world.resource::<ArkanoidState>();
     let paddle_vx = world.velocity(paddle).x;
     let field_width = world.field.width;
     world.transform_mut(paddle).x += paddle_vx * dt;
@@ -41,33 +46,43 @@ fn apply_physics(world: &mut World, dt: f32) {
     let max_x = field_width - paddle_half_width;
     let paddle_transform = world.transform_mut(paddle);
     paddle_transform.x = paddle_transform.x.clamp(min_x, max_x);
+}
 
-    let field_height = world.field.height;
-    let ball_radius = BALL_SIZE / 2.0;
-
+fn move_ball(world: &mut World, dt: f32) {
+    let &ArkanoidState { ball, .. } = world.resource::<ArkanoidState>();
     let ball_vx = world.velocity(ball).x;
     let ball_vy = world.velocity(ball).y;
     world.transform_mut(ball).x += ball_vx * dt;
     world.transform_mut(ball).y += ball_vy * dt;
+}
 
-    let ball_transform = world.transform_mut(ball);
+fn collide_ball(world: &mut World) {
+    let &ArkanoidState { ball, .. } = world.resource::<ArkanoidState>();
+    let field_width = world.field.width;
+    let field_height = world.field.height;
+    let ball_radius = BALL_SIZE / 2.0;
 
-    let mut bounce_x = false;
-    let mut bounce_y = false;
+    let (bounce_x, bounce_y) = {
+        let ball_transform = world.transform_mut(ball);
+        let mut bounce_x = false;
+        let mut bounce_y = false;
 
-    if ball_transform.x - ball_radius <= 0.0 || ball_transform.x + ball_radius >= field_width {
-        bounce_x = true;
-        ball_transform.x = ball_transform
-            .x
-            .clamp(ball_radius, field_width - ball_radius);
-    }
+        if ball_transform.x - ball_radius <= 0.0 || ball_transform.x + ball_radius >= field_width {
+            bounce_x = true;
+            ball_transform.x = ball_transform
+                .x
+                .clamp(ball_radius, field_width - ball_radius);
+        }
 
-    if ball_transform.y - ball_radius <= 0.0 || ball_transform.y + ball_radius >= field_height {
-        bounce_y = true;
-        ball_transform.y = ball_transform
-            .y
-            .clamp(ball_radius, field_height - ball_radius);
-    }
+        if ball_transform.y - ball_radius <= 0.0 || ball_transform.y + ball_radius >= field_height {
+            bounce_y = true;
+            ball_transform.y = ball_transform
+                .y
+                .clamp(ball_radius, field_height - ball_radius);
+        }
+
+        (bounce_x, bounce_y)
+    };
 
     if bounce_x || bounce_y {
         let ball_velocity = world.velocity_mut(ball);
