@@ -2,6 +2,8 @@ use crate::engine::ecs::schedule::Schedule;
 use crate::engine::ecs::world::World;
 use crate::engine::Snapshot;
 
+mod arkanoid;
+mod pong;
 mod registry;
 
 type BuildFn = fn(f32, f32) -> (World, Schedule, Snapshot);

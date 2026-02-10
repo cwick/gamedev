@@ -1,10 +1,5 @@
-use super::BuildFn;
+use super::{arkanoid, pong, BuildFn};
 use crate::engine::{GameDefinition, GameId};
-
-#[path = "arkanoid/mod.rs"]
-mod arkanoid;
-#[path = "pong/mod.rs"]
-mod pong;
 
 #[derive(Clone, Copy)]
 pub struct GameEntry {

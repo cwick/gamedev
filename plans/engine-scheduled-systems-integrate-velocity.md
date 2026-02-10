@@ -58,7 +58,7 @@ Execution order per tick:
 3. Keep `Engine::step` responsibilities unchanged except for schedule execution semantics.
 
 ### 3) Pong Migration
-1. Remove manual `integrate_velocity` call from `src/engine/games/pong/mod.rs`.
+1. Remove manual `integrate_velocity` call from `src/games/pong/mod.rs`.
 2. Split system registration by phase:
    - `Control`: `handle_restart`, `apply_input`
    - `Resolve`: collision/scoring/timers and related post-integration logic
@@ -69,7 +69,7 @@ Execution order per tick:
    - paddle clamping and collision outcomes
 
 ### 4) Arkanoid Migration
-1. Remove manual `integrate_velocity` call from `src/engine/games/arkanoid/mod.rs`.
+1. Remove manual `integrate_velocity` call from `src/games/arkanoid/mod.rs`.
 2. Split system registration by phase:
    - `Control`: `apply_input`
    - `Resolve`: clamp and collision response
@@ -95,13 +95,13 @@ Execution order per tick:
    - verify `integrate_velocity` still updates transforms through schedule execution
    - verify it is not called manually from game physics paths
 
-3. Pong regression coverage (`src/engine/games/pong/tests.rs`):
+3. Pong regression coverage (`src/games/pong/tests.rs`):
    - top/bottom wall bounce
    - paddle bounce direction and angle behavior
    - scoring and serve delay behavior
    - game-over/restart behavior
 
-4. Arkanoid regression coverage (`src/engine/games/arkanoid/mod.rs` tests and any added tests):
+4. Arkanoid regression coverage (`src/games/arkanoid/mod.rs` tests and any added tests):
    - paddle input movement still functions
    - paddle clamp bounds
    - ball wall collision response
