@@ -9,6 +9,9 @@
 
 <body>
     <canvas id="gameCanvas" width="800" height="600" style="display:block;margin:0 auto;background:#000;"></canvas>
+    <div id="lockHint" style="position:absolute;top:10px;left:50%;transform:translateX(-50%);color:#fff;font-family:monospace;font-size:14px;text-align:center;">
+        Click canvas to lock mouse
+    </div>
     <script type="module">
         import init, {
             engine_init,
@@ -29,6 +32,7 @@
         });
 
         let lastTime = 0;
+        let mouseDeltaX = 0;
 
         const keys = createInputHandler({
             left: ['ArrowLeft', 'a', 'A'],
@@ -39,6 +43,30 @@
             const wasmModule = await init();
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
+            const lockHint = document.getElementById('lockHint');
+
+            canvas.addEventListener('click', async () => {
+                if (!document.pointerLockElement) {
+                    await canvas.requestPointerLock();
+                }
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (document.pointerLockElement === canvas) {
+                    mouseDeltaX += e.movementX;
+                }
+            });
+
+            document.addEventListener('pointerlockchange', () => {
+                if (document.pointerLockElement === canvas) {
+                    canvas.style.cursor = 'none';
+                    lockHint.style.display = 'none';
+                } else {
+                    canvas.style.cursor = 'default';
+                    lockHint.style.display = 'block';
+                    mouseDeltaX = 0;
+                }
+            });
 
             engine_init('Arkanoid', 800, 600);
 
@@ -48,10 +76,16 @@
                 lastTime = currentTimeSec;
 
                 if (deltaTime > 0.0) {
+                    const clampedDelta = Math.max(-256, Math.min(256, Math.round(mouseDeltaX)));
+                    const deltaEncoded = (clampedDelta & 0xFFFF) << 16;
+
                     const input_bits =
                         (keys.left ? 0b0100 : 0) |
-                        (keys.right ? 0b1000 : 0);
+                        (keys.right ? 0b1000 : 0) |
+                        deltaEncoded;
+
                     engine_step(deltaTime, input_bits);
+                    mouseDeltaX = 0;
                 }
 
                 const statePtr = game_state_ptr();

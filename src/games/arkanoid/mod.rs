@@ -1,4 +1,4 @@
-use crate::engine::ecs::components::{BounceCollider, Renderable, Transform, Velocity};
+use crate::engine::ecs::components::{BounceCollider, Transform, Velocity};
 use crate::engine::ecs::entity::EntityId;
 use crate::engine::ecs::schedule::{Schedule, SystemPhase};
 use crate::engine::ecs::world::World;
@@ -18,15 +18,22 @@ struct ArkanoidState {
     ball: EntityId,
 }
 
-fn apply_input(world: &mut World, _dt: f32) {
+fn apply_input(world: &mut World, dt: f32) {
     let &ArkanoidState { paddle, .. } = world.resource::<ArkanoidState>();
 
     let input_bits = world.input.bits;
-    let left = (input_bits & INPUT_LEFT) != 0;
-    let right = (input_bits & INPUT_RIGHT) != 0;
-    let dir = (right as i32) - (left as i32);
+    let mouse_delta_raw = (input_bits >> 16) as u16 as i16;
+    let mouse_delta = mouse_delta_raw as f32;
 
-    world.velocity_mut(paddle).x = dir as f32 * PADDLE_SPEED;
+    if mouse_delta.abs() > 0.1 {
+        const MOUSE_SENSITIVITY: f32 = 1.5;
+        world.transform_mut(paddle).x += mouse_delta * MOUSE_SENSITIVITY;
+    } else {
+        let left = (input_bits & INPUT_LEFT) != 0;
+        let right = (input_bits & INPUT_RIGHT) != 0;
+        let dir = (right as i32) - (left as i32);
+        world.transform_mut(paddle).x += dir as f32 * PADDLE_SPEED * dt;
+    }
 }
 
 fn clamp_paddle_to_field(world: &mut World, _dt: f32) {
@@ -48,16 +55,6 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
         Transform {
             x: width / 2.0,
             y: height - PADDLE_HEIGHT - (PADDLE_HEIGHT / 2.0),
-        },
-    );
-    world.set_velocity(paddle, Velocity { x: 0.0, y: 0.0 });
-
-    // TODO: unused
-    world.set_renderable(
-        paddle,
-        Renderable {
-            w: PADDLE_WIDTH,
-            h: PADDLE_HEIGHT,
         },
     );
 

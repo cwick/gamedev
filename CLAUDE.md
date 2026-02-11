@@ -25,7 +25,7 @@ web/index.html      → canvas rendering, input handling, game loop
 - Do NOT use `web-sys` or `extern "C"` blocks — Rust only exports, never imports
 - Do NOT commit build artifacts (`target/`, `web/dist/`, `Cargo.lock` are gitignored)
 - Run `cargo clippy` and `cargo fmt` before committing
-- Prefer self-documenting code over comments
+- Prefer self-documenting code over comments. Only add comments when the code cannot be made clearer
 
 ## Code Quality
 

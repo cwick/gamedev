@@ -16,12 +16,6 @@ pub struct BounceCollider {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Renderable {
-    pub w: f32,
-    pub h: f32,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Spin {
     pub value: f32,
 }
