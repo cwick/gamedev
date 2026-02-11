@@ -1,6 +1,6 @@
 # AI Agent Guide
 
-Rust WebAssembly Pong game. Rust handles all game logic; JS handles rendering and input.
+Rust WebAssembly game engine with multiple games. Rust handles all game logic; JS handles rendering and input.
 
 ## Build Rule
 
@@ -9,11 +9,16 @@ Local tooling now runs `wasm-pack` automatically (e.g., via `just dev`/`cargo wa
 ## Architecture
 
 ```
-src/lib.rs          → re-exports wasm_api
-src/wasm_api.rs     → #[wasm_bindgen] FFI layer (GameState struct exposed to JS)
-src/engine.rs       → pure game simulation logic (no WASM dependencies)
-src/engine/tests.rs → unit tests for engine
-web/index.html      → canvas rendering, input handling, game loop
+src/lib.rs                  → re-exports wasm_api
+src/wasm_api.rs             → #[wasm_bindgen] FFI layer (GameState struct exposed to JS)
+src/engine/                 → ECS engine (components, systems, world, schedule, resources)
+src/games/                  → game definitions (registry, per-game modules)
+src/games/pong/             → Pong game logic and resources
+src/games/arkanoid/         → Arkanoid game logic
+web/index.html              → Pong: canvas rendering, input handling, game loop
+web/arkanoid/index.html     → Arkanoid: canvas rendering, input handling, game loop
+web/app.js                  → game launcher / shared app shell
+web/input.js                → shared input handling
 ```
 
 **Data flow is strictly one-way: JS calls Rust, never the reverse.** Rust does NOT import or call any JS functions. Game state is communicated via a `[f32; 12]` snapshot array that JS reads as a `Float32Array`.
@@ -29,7 +34,7 @@ web/index.html      → canvas rendering, input handling, game loop
 
 ## Code Quality
 
-All code must pass `cargo clippy` without warnings and be formatted with `cargo fmt`.
+All code must pass `cargo clippy` without warnings and be formatted with `cargo fmt`. Run `cargo test` after making changes to verify correctness.
 
 ## Commit Messages
 
