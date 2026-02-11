@@ -7,7 +7,7 @@ const FIELD_WIDTH: f32 = 800.0;
 const FIELD_HEIGHT: f32 = 600.0;
 
 fn new_game() -> (World, Schedule) {
-    let (world, schedule, _snapshot) = build_world(FIELD_WIDTH, FIELD_HEIGHT);
+    let (world, schedule, _snapshot, _tuning_api) = build_world(FIELD_WIDTH, FIELD_HEIGHT);
     let schedule = schedule
         .with_system_in_phase(SystemPhase::Physics, integrate_velocity)
         .with_system_in_phase(SystemPhase::Physics, bounce_in_field);

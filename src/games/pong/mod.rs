@@ -5,7 +5,7 @@ use crate::engine::{INPUT_ACTION, INPUT_DOWN, INPUT_UP};
 pub mod resources;
 use crate::engine::ecs::schedule::{Schedule, SystemPhase};
 use crate::engine::ecs::world::World;
-use crate::engine::Snapshot;
+use crate::engine::{Snapshot, TuningApi};
 pub use resources::{PongPhase, PongPlayer, PongState};
 
 #[repr(usize)]
@@ -39,7 +39,7 @@ impl SnapshotField {
 
 const PADDLE_SPEED: f32 = 300.0;
 const AI_DEAD_ZONE: f32 = 10.0;
-const DEFAULT_WINNING_SCORE: u32 = 11;
+const WINNING_SCORE: u32 = 11;
 const SERVE_DELAY_MIN: f32 = 1.0;
 const SERVE_DELAY_MAX: f32 = 3.0;
 
@@ -66,7 +66,7 @@ fn reset_game(world: &mut World) {
         pong.phase = PongPhase::Playing;
         pong.winner = None;
         pong.conceded_by = None;
-        pong.winning_score = DEFAULT_WINNING_SCORE;
+        pong.winning_score = WINNING_SCORE;
         pong.serve_delay_remaining = 0.0;
     }
 
@@ -350,7 +350,7 @@ fn tick_serve(world: &mut World, dt: f32) {
     }
 }
 
-pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
+pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot, TuningApi) {
     let mut world = World::new(width, height);
 
     let ball = world.spawn();
@@ -398,7 +398,7 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
         phase: PongPhase::Playing,
         winner: None,
         conceded_by: None,
-        winning_score: DEFAULT_WINNING_SCORE,
+        winning_score: WINNING_SCORE,
         serve_delay_remaining: 0.0,
     });
 
@@ -417,6 +417,7 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
         world,
         schedule,
         Snapshot::new(write_snapshot, vec![0.0; SnapshotField::Count as usize]),
+        TuningApi::unsupported(),
     )
 }
 

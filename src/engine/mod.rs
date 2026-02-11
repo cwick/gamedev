@@ -28,6 +28,56 @@ fn clamp_dt(dt_seconds: f32) -> f32 {
 }
 
 type SnapshotWriter = fn(&World, &mut [f32]);
+type TuningSetFn = fn(&mut World, u32, f32) -> u32;
+type TuningGetFn = fn(&World, u32) -> Option<f32>;
+type TuningResetFn = fn(&mut World);
+
+pub const TUNING_STATUS_APPLIED: u32 = 0;
+pub const TUNING_STATUS_UNKNOWN_PARAM: u32 = 1;
+pub const TUNING_STATUS_REJECTED: u32 = 2;
+
+pub struct TuningApi {
+    set: TuningSetFn,
+    get: TuningGetFn,
+    reset: TuningResetFn,
+    schema_version: u32,
+}
+
+impl TuningApi {
+    pub fn unsupported() -> Self {
+        fn set_unsupported(_world: &mut World, _param_id: u32, _value: f32) -> u32 {
+            TUNING_STATUS_UNKNOWN_PARAM
+        }
+
+        fn get_unsupported(_world: &World, _param_id: u32) -> Option<f32> {
+            None
+        }
+
+        fn reset_unsupported(_world: &mut World) {}
+
+        Self {
+            set: set_unsupported,
+            get: get_unsupported,
+            reset: reset_unsupported,
+            schema_version: 0,
+        }
+    }
+
+    pub fn new(
+        set: TuningSetFn,
+        get: TuningGetFn,
+        reset: TuningResetFn,
+        schema_version: u32,
+    ) -> Self {
+        Self {
+            set,
+            get,
+            reset,
+            schema_version,
+        }
+    }
+}
+
 pub struct Snapshot {
     writer: SnapshotWriter,
     buffer: Vec<f32>,
@@ -55,10 +105,16 @@ pub struct Engine {
     world: World,
     schedule: Schedule,
     snapshot: Snapshot,
+    tuning_api: TuningApi,
 }
 
 impl Engine {
-    pub fn new(world: World, schedule: Schedule, snapshot: Snapshot) -> Self {
+    pub fn new(
+        world: World,
+        schedule: Schedule,
+        snapshot: Snapshot,
+        tuning_api: TuningApi,
+    ) -> Self {
         let schedule = schedule
             .with_system_in_phase(SystemPhase::Physics, integrate_velocity)
             .with_system_in_phase(SystemPhase::Physics, bounce_in_field);
@@ -66,6 +122,7 @@ impl Engine {
             world,
             schedule,
             snapshot,
+            tuning_api,
         };
         engine.snapshot.update(&engine.world);
         engine
@@ -84,5 +141,21 @@ impl Engine {
 
     pub fn snapshot_len(&self) -> usize {
         self.snapshot.len()
+    }
+
+    pub fn set_tuning_param(&mut self, param_id: u32, value: f32) -> u32 {
+        (self.tuning_api.set)(&mut self.world, param_id, value)
+    }
+
+    pub fn get_tuning_param(&self, param_id: u32) -> Option<f32> {
+        (self.tuning_api.get)(&self.world, param_id)
+    }
+
+    pub fn reset_tuning_defaults(&mut self) {
+        (self.tuning_api.reset)(&mut self.world);
+    }
+
+    pub fn tuning_schema_version(&self) -> u32 {
+        self.tuning_api.schema_version
     }
 }
