@@ -1,4 +1,4 @@
-use super::components::{Collider, Renderable, Spin, Transform, Velocity};
+use super::components::{BounceCollider, Renderable, Spin, Transform, Velocity};
 use super::entity::{EntityAllocator, EntityId};
 use super::resources::{FieldBounds, InputBits};
 use std::any::{Any, TypeId};
@@ -7,7 +7,7 @@ use std::collections::HashMap;
 pub struct World {
     pub transforms: Vec<Option<Transform>>,
     pub velocities: Vec<Option<Velocity>>,
-    pub colliders: Vec<Option<Collider>>,
+    pub wall_bounce_colliders: Vec<Option<BounceCollider>>,
     pub renderables: Vec<Option<Renderable>>,
     pub spins: Vec<Option<Spin>>,
     pub input: InputBits,
@@ -21,7 +21,7 @@ impl World {
         Self {
             transforms: Vec::new(),
             velocities: Vec::new(),
-            colliders: Vec::new(),
+            wall_bounce_colliders: Vec::new(),
             renderables: Vec::new(),
             spins: Vec::new(),
             input: InputBits { bits: 0 },
@@ -46,8 +46,8 @@ impl World {
         if idx < self.velocities.len() {
             self.velocities[idx] = None;
         }
-        if idx < self.colliders.len() {
-            self.colliders[idx] = None;
+        if idx < self.wall_bounce_colliders.len() {
+            self.wall_bounce_colliders[idx] = None;
         }
         if idx < self.renderables.len() {
             self.renderables[idx] = None;
@@ -68,9 +68,9 @@ impl World {
         self.velocities[entity.0 as usize] = Some(value);
     }
 
-    pub fn set_collider(&mut self, entity: EntityId, value: Collider) {
+    pub fn set_wall_bounce_collider(&mut self, entity: EntityId, value: BounceCollider) {
         self.ensure_capacity(entity.0 as usize);
-        self.colliders[entity.0 as usize] = Some(value);
+        self.wall_bounce_colliders[entity.0 as usize] = Some(value);
     }
 
     pub fn set_renderable(&mut self, entity: EntityId, value: Renderable) {
@@ -115,17 +115,17 @@ impl World {
             .expect("velocity component missing")
     }
 
-    pub fn collider(&self, entity: EntityId) -> &Collider {
+    pub fn collider(&self, entity: EntityId) -> &BounceCollider {
         let idx = entity.0 as usize;
-        self.colliders
+        self.wall_bounce_colliders
             .get(idx)
             .and_then(|opt| opt.as_ref())
             .expect("collider component missing")
     }
 
-    pub fn collider_mut(&mut self, entity: EntityId) -> &mut Collider {
+    pub fn collider_mut(&mut self, entity: EntityId) -> &mut BounceCollider {
         let idx = entity.0 as usize;
-        self.colliders
+        self.wall_bounce_colliders
             .get_mut(idx)
             .and_then(|opt| opt.as_mut())
             .expect("collider component missing")
@@ -191,8 +191,8 @@ impl World {
         if self.velocities.len() < target {
             self.velocities.resize_with(target, || None);
         }
-        if self.colliders.len() < target {
-            self.colliders.resize_with(target, || None);
+        if self.wall_bounce_colliders.len() < target {
+            self.wall_bounce_colliders.resize_with(target, || None);
         }
         if self.renderables.len() < target {
             self.renderables.resize_with(target, || None);
@@ -216,7 +216,7 @@ mod tests {
 
         assert!(world.transforms.len() > idx);
         assert!(world.velocities.len() > idx);
-        assert!(world.colliders.len() > idx);
+        assert!(world.wall_bounce_colliders.len() > idx);
         assert!(world.renderables.len() > idx);
         assert!(world.spins.len() > idx);
     }

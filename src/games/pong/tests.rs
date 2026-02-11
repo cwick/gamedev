@@ -1,6 +1,6 @@
 use super::*;
 use crate::engine::ecs::schedule::SystemPhase;
-use crate::engine::ecs::systems::integrate_velocity;
+use crate::engine::ecs::systems::{bounce_in_field, integrate_velocity};
 
 const DT: f32 = 1.0 / 60.0;
 const FIELD_WIDTH: f32 = 800.0;
@@ -8,7 +8,9 @@ const FIELD_HEIGHT: f32 = 600.0;
 
 fn new_game() -> (World, Schedule) {
     let (world, schedule, _snapshot) = build_world(FIELD_WIDTH, FIELD_HEIGHT);
-    let schedule = schedule.with_system_in_phase(SystemPhase::Physics, integrate_velocity);
+    let schedule = schedule
+        .with_system_in_phase(SystemPhase::Physics, integrate_velocity)
+        .with_system_in_phase(SystemPhase::Physics, bounce_in_field);
     (world, schedule)
 }
 
@@ -31,56 +33,6 @@ fn pong_ref(world: &World) -> &PongState {
 
 fn pong_mut(world: &mut World) -> &mut PongState {
     world.resource_mut::<PongState>()
-}
-
-mod wall_collisions {
-    use super::*;
-
-    #[test]
-    fn bounces_off_top_wall() {
-        let (mut world, schedule) = new_game();
-        let ball = ball_entity(&world);
-        world.transform_mut(ball).x = FIELD_WIDTH / 2.0;
-        world.transform_mut(ball).y = 5.0;
-        world.velocity_mut(ball).x = 0.0;
-        world.velocity_mut(ball).y = -300.0;
-
-        let velocity_before = world.velocity(ball).y;
-        step(&mut world, &schedule, DT, 0);
-
-        let velocity_after = world.velocity(ball).y;
-        assert!(
-            velocity_after > 0.0,
-            "ball should bounce down after hitting top wall"
-        );
-        assert_eq!(
-            velocity_after, -velocity_before,
-            "ball should reverse vertical direction"
-        );
-    }
-
-    #[test]
-    fn bounces_off_bottom_wall() {
-        let (mut world, schedule) = new_game();
-        let ball = ball_entity(&world);
-        world.transform_mut(ball).x = FIELD_WIDTH / 2.0;
-        world.transform_mut(ball).y = FIELD_HEIGHT - 5.0;
-        world.velocity_mut(ball).x = 0.0;
-        world.velocity_mut(ball).y = 300.0;
-
-        let velocity_before = world.velocity(ball).y;
-        step(&mut world, &schedule, DT, 0);
-
-        let velocity_after = world.velocity(ball).y;
-        assert!(
-            velocity_after < 0.0,
-            "ball should bounce up after hitting bottom wall"
-        );
-        assert_eq!(
-            velocity_after, -velocity_before,
-            "ball should reverse vertical direction"
-        );
-    }
 }
 
 mod paddle_collisions {

@@ -11,9 +11,8 @@ pub struct Velocity {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Collider {
-    pub half_w: f32,
-    pub half_h: f32,
+pub struct BounceCollider {
+    pub radius: f32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

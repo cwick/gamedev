@@ -1,6 +1,6 @@
 use rand::Rng;
 
-use crate::engine::ecs::components::{Spin, Transform, Velocity};
+use crate::engine::ecs::components::{BounceCollider, Spin, Transform, Velocity};
 use crate::engine::{INPUT_ACTION, INPUT_DOWN, INPUT_UP};
 pub mod resources;
 use crate::engine::ecs::schedule::{Schedule, SystemPhase};
@@ -286,19 +286,11 @@ fn collide_walls(world: &mut World, _dt: f32) {
     let ball = world.resource::<PongState>().ball;
     let ball_transform = world.transform(ball);
     let ball_x = ball_transform.x;
-    let ball_y = ball_transform.y;
 
-    if ball_x - BALL_RADIUS <= 0.0 {
+    if ball_x <= BALL_RADIUS {
         world.resource_mut::<PongState>().conceded_by = Some(PongPlayer::One);
-    } else if ball_x + BALL_RADIUS >= world.field.width {
+    } else if ball_x >= world.field.width - BALL_RADIUS {
         world.resource_mut::<PongState>().conceded_by = Some(PongPlayer::Two);
-    }
-
-    if ball_y - BALL_RADIUS <= 0.0 || ball_y + BALL_RADIUS >= world.field.height {
-        world.velocity_mut(ball).y = -world.velocity_mut(ball).y;
-        world.spin_mut(ball).value = -world.spin_mut(ball).value;
-        let max_y = world.field.height - BALL_RADIUS;
-        world.transform_mut(ball).y = world.transform_mut(ball).y.clamp(BALL_RADIUS, max_y);
     }
 }
 
@@ -371,6 +363,12 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
     );
     world.set_velocity(ball, Velocity { x: 0.0, y: 0.0 });
     world.set_spin(ball, Spin { value: 0.0 });
+    world.set_wall_bounce_collider(
+        ball,
+        BounceCollider {
+            radius: BALL_RADIUS,
+        },
+    );
 
     let paddle1 = world.spawn();
     world.set_transform(
@@ -410,8 +408,8 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
         .with_system_in_phase(SystemPhase::Control, handle_restart)
         .with_system_in_phase(SystemPhase::Control, apply_input)
         .with_system_in_phase(SystemPhase::Resolve, resolve_post_integration)
-        .with_system_in_phase(SystemPhase::Resolve, collide_paddles)
         .with_system_in_phase(SystemPhase::Resolve, collide_walls)
+        .with_system_in_phase(SystemPhase::Resolve, collide_paddles)
         .with_system_in_phase(SystemPhase::Resolve, resolve_scoring)
         .with_system_in_phase(SystemPhase::Resolve, tick_serve);
 
