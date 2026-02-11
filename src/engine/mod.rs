@@ -2,7 +2,8 @@
 
 pub mod ecs;
 
-use crate::engine::ecs::schedule::Schedule;
+use crate::engine::ecs::schedule::{Schedule, SystemPhase};
+use crate::engine::ecs::systems::integrate_velocity;
 use crate::engine::ecs::world::World;
 
 pub const INPUT_UP: u32 = 0b0000_0001;
@@ -58,6 +59,7 @@ pub struct Engine {
 
 impl Engine {
     pub fn new(world: World, schedule: Schedule, snapshot: Snapshot) -> Self {
+        let schedule = schedule.with_system_in_phase(SystemPhase::Physics, integrate_velocity);
         let mut engine = Self {
             world,
             schedule,

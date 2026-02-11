@@ -1,8 +1,7 @@
 use crate::engine::ecs::components::{Collider, Renderable, Transform, Velocity};
 use crate::engine::ecs::entity::EntityId;
-use crate::engine::ecs::schedule::Schedule;
+use crate::engine::ecs::schedule::{Schedule, SystemPhase};
 use crate::engine::ecs::world::World;
-use crate::engine::ecs::systems::integrate_velocity;
 use crate::engine::{Snapshot, INPUT_LEFT, INPUT_RIGHT};
 
 const PADDLE_WIDTH: f32 = 96.0;
@@ -30,13 +29,7 @@ fn apply_input(world: &mut World, _dt: f32) {
     world.velocity_mut(paddle).x = dir as f32 * PADDLE_SPEED;
 }
 
-fn apply_physics(world: &mut World, dt: f32) {
-    integrate_velocity(world, dt);
-    clamp_paddle_to_field(world);
-    collide_ball(world);
-}
-
-fn clamp_paddle_to_field(world: &mut World) {
+fn clamp_paddle_to_field(world: &mut World, _dt: f32) {
     let &ArkanoidState { paddle, .. } = world.resource::<ArkanoidState>();
     let field_width = world.field.width;
     let paddle_half_width = PADDLE_WIDTH / 2.0;
@@ -46,7 +39,7 @@ fn clamp_paddle_to_field(world: &mut World) {
     paddle_transform.x = paddle_transform.x.clamp(min_x, max_x);
 }
 
-fn collide_ball(world: &mut World) {
+fn collide_ball(world: &mut World, _dt: f32) {
     let &ArkanoidState { ball, .. } = world.resource::<ArkanoidState>();
     let field_width = world.field.width;
     let field_height = world.field.height;
@@ -131,8 +124,9 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
     world.insert_resource(ArkanoidState { paddle, ball });
 
     let schedule = Schedule::new()
-        .with_system(apply_input)
-        .with_system(apply_physics);
+        .with_system_in_phase(SystemPhase::Control, apply_input)
+        .with_system_in_phase(SystemPhase::Resolve, clamp_paddle_to_field)
+        .with_system_in_phase(SystemPhase::Resolve, collide_ball);
 
     (
         world,

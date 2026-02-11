@@ -13,9 +13,9 @@ pub fn integrate_velocity(world: &mut World, dt: f32) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::components::{Transform, Velocity};
     use super::super::world::World;
+    use super::integrate_velocity;
 
     #[test]
     fn moves_entities_with_both_components() {
@@ -70,5 +70,4 @@ mod tests {
         assert_eq!(world.transform(entity2).x, 12.0);
         assert_eq!(world.transform(entity2).y, 23.0);
     }
-
 }

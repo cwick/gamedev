@@ -1,4 +1,6 @@
 use super::*;
+use crate::engine::ecs::schedule::SystemPhase;
+use crate::engine::ecs::systems::integrate_velocity;
 
 const DT: f32 = 1.0 / 60.0;
 const FIELD_WIDTH: f32 = 800.0;
@@ -6,6 +8,7 @@ const FIELD_HEIGHT: f32 = 600.0;
 
 fn new_game() -> (World, Schedule) {
     let (world, schedule, _snapshot) = build_world(FIELD_WIDTH, FIELD_HEIGHT);
+    let schedule = schedule.with_system_in_phase(SystemPhase::Physics, integrate_velocity);
     (world, schedule)
 }
 

@@ -3,9 +3,8 @@ use rand::Rng;
 use crate::engine::ecs::components::{Spin, Transform, Velocity};
 use crate::engine::{INPUT_ACTION, INPUT_DOWN, INPUT_UP};
 pub mod resources;
-use crate::engine::ecs::schedule::Schedule;
+use crate::engine::ecs::schedule::{Schedule, SystemPhase};
 use crate::engine::ecs::world::World;
-use crate::engine::ecs::systems::integrate_velocity;
 use crate::engine::Snapshot;
 pub use resources::{PongPhase, PongPlayer, PongState};
 
@@ -189,13 +188,11 @@ fn apply_input(world: &mut World, _dt: f32) {
     }
 }
 
-fn move_entities(world: &mut World, dt: f32) {
+fn resolve_post_integration(world: &mut World, dt: f32) {
     let phase = world.resource::<PongState>().phase;
     if phase == PongPhase::GameOver {
         return;
     }
-
-    integrate_velocity(world, dt);
 
     if ball_visible(world) {
         let ball = world.resource::<PongState>().ball;
@@ -227,7 +224,7 @@ fn check_paddle_collision(ball_x: f32, ball_y: f32, paddle_x: f32, paddle_y: f32
     dist_squared < (BALL_RADIUS * BALL_RADIUS)
 }
 
-fn collide_paddles(world: &mut World) {
+fn collide_paddles(world: &mut World, _dt: f32) {
     let phase = world.resource::<PongState>().phase;
     if phase == PongPhase::GameOver || !ball_visible(world) {
         return;
@@ -281,7 +278,7 @@ fn collide_paddles(world: &mut World) {
     }
 }
 
-fn collide_walls(world: &mut World) {
+fn collide_walls(world: &mut World, _dt: f32) {
     if world.resource::<PongState>().phase == PongPhase::GameOver || !ball_visible(world) {
         return;
     }
@@ -305,7 +302,10 @@ fn collide_walls(world: &mut World) {
     }
 }
 
-fn resolve_scoring(world: &mut World) {
+fn resolve_scoring(world: &mut World, _dt: f32) {
+    if !ball_visible(world) {
+        return;
+    }
     let conceder = match world.resource::<PongState>().conceded_by {
         Some(player) => player,
         None => return,
@@ -358,19 +358,6 @@ fn tick_serve(world: &mut World, dt: f32) {
     }
 }
 
-fn apply_physics(world: &mut World, dt: f32) {
-    let phase = world.resource::<PongState>().phase;
-    if phase == PongPhase::GameOver {
-        return;
-    }
-    move_entities(world, dt);
-    if ball_visible(world) {
-        collide_paddles(world);
-        collide_walls(world);
-        resolve_scoring(world);
-    }
-}
-
 pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
     let mut world = World::new(width, height);
 
@@ -420,10 +407,13 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
     launch_ball(&mut world);
 
     let schedule = Schedule::new()
-        .with_system(handle_restart)
-        .with_system(apply_input)
-        .with_system(apply_physics)
-        .with_system(tick_serve);
+        .with_system_in_phase(SystemPhase::Control, handle_restart)
+        .with_system_in_phase(SystemPhase::Control, apply_input)
+        .with_system_in_phase(SystemPhase::Resolve, resolve_post_integration)
+        .with_system_in_phase(SystemPhase::Resolve, collide_paddles)
+        .with_system_in_phase(SystemPhase::Resolve, collide_walls)
+        .with_system_in_phase(SystemPhase::Resolve, resolve_scoring)
+        .with_system_in_phase(SystemPhase::Resolve, tick_serve);
 
     (
         world,
