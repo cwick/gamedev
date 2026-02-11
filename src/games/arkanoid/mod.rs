@@ -4,12 +4,12 @@ use crate::engine::ecs::schedule::{Schedule, SystemPhase};
 use crate::engine::ecs::world::World;
 use crate::engine::{Snapshot, INPUT_LEFT, INPUT_RIGHT};
 
-const PADDLE_WIDTH: f32 = 96.0;
+const PADDLE_WIDTH: f32 = 100.0;
 const PADDLE_HEIGHT: f32 = 16.0;
 const PADDLE_SPEED: f32 = 400.0;
 
 const BALL_RADIUS: f32 = 6.0;
-const BALL_SPEED: f32 = 300.0;
+const BALL_SPEED: f32 = 420.0;
 
 const SNAPSHOT_LEN: usize = SnapshotField::Count as usize;
 
@@ -44,6 +44,57 @@ fn clamp_paddle_to_field(world: &mut World, _dt: f32) {
     let max_x = field_width - paddle_half_width;
     let paddle_transform = world.transform_mut(paddle);
     paddle_transform.x = paddle_transform.x.clamp(min_x, max_x);
+}
+
+fn ball_paddle_collision(world: &mut World, _dt: f32) {
+    let &ArkanoidState { paddle, ball } = world.resource::<ArkanoidState>();
+
+    let paddle_transform = *world.transform(paddle);
+    let ball_transform = *world.transform(ball);
+    let ball_velocity = world.velocity(ball);
+
+    if ball_velocity.y <= 0.0 {
+        return;
+    }
+
+    let paddle_half_width = PADDLE_WIDTH / 2.0;
+    let paddle_half_height = PADDLE_HEIGHT / 2.0;
+    let paddle_left = paddle_transform.x - paddle_half_width;
+    let paddle_right = paddle_transform.x + paddle_half_width;
+    let paddle_top = paddle_transform.y - paddle_half_height;
+    let paddle_bottom = paddle_transform.y + paddle_half_height;
+
+    let ball_bottom = ball_transform.y + BALL_RADIUS;
+
+    if ball_bottom < paddle_top || ball_bottom > paddle_bottom {
+        return;
+    }
+
+    if ball_transform.x < paddle_left || ball_transform.x > paddle_right {
+        return;
+    }
+
+    let relative_hit = (ball_transform.x - paddle_left) / PADDLE_WIDTH;
+    let zone_index = (relative_hit * 8.0).floor() as usize;
+    let zone_index = zone_index.clamp(0, 7);
+
+    let angles_from_horizontal: [f32; 8] = [15.0, 20.0, 30.0, 60.0, 60.0, 30.0, 20.0, 15.0];
+    let angle_from_horizontal = angles_from_horizontal[zone_index];
+    let angle_rad = (90.0 - angle_from_horizontal).to_radians();
+
+    let speed = (ball_velocity.x * ball_velocity.x + ball_velocity.y * ball_velocity.y).sqrt();
+
+    let direction = if zone_index < 4 { -1.0 } else { 1.0 };
+
+    let new_vx = direction * angle_rad.sin() * speed;
+    let new_vy = -angle_rad.cos() * speed;
+
+    let ball_velocity_mut = world.velocity_mut(ball);
+    ball_velocity_mut.x = new_vx;
+    ball_velocity_mut.y = new_vy;
+
+    let ball_transform_mut = world.transform_mut(ball);
+    ball_transform_mut.y = paddle_top - BALL_RADIUS;
 }
 
 pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
@@ -82,7 +133,8 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot) {
 
     let schedule = Schedule::new()
         .with_system_in_phase(SystemPhase::Control, apply_input)
-        .with_system_in_phase(SystemPhase::Resolve, clamp_paddle_to_field);
+        .with_system_in_phase(SystemPhase::Resolve, clamp_paddle_to_field)
+        .with_system_in_phase(SystemPhase::Resolve, ball_paddle_collision);
 
     (
         world,
