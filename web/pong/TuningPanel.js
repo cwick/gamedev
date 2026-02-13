@@ -17,14 +17,6 @@ const TuningControl = ({
     }
   };
 
-  const handleNumberChange = (e) => {
-    const parsed = Number(e.target.value);
-    if (Number.isFinite(parsed)) {
-      const status = engine_set_tuning_param(spec.paramId, parsed);
-      setTrigger((t) => t + 1);
-    }
-  };
-
   const displayValue = Number.isFinite(currentValue)
     ? currentValue.toFixed(spec.decimals ?? 2)
     : "N/A";
@@ -49,6 +41,7 @@ const TuningControl = ({
 };
 
 const TuningPanel = ({
+  title,
   schemaVersion,
   controls,
   engine_get_tuning_param,
@@ -65,7 +58,7 @@ const TuningPanel = ({
   return html`
     <div class="debug">
       <div class="debug__section">
-        <h3 class="debug__title">Arkanoid Tuning</h3>
+        <h3 class="debug__title">${title}</h3>
         <div class="debug__row">
           <span class="debug__label">Schema</span>
           <span class="debug__value">${schemaVersion}</span>

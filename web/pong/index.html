@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pong</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+
+  <body>
+    <div class="layout">
+      <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+    <div id="tuningRoot"></div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "preact": "../vendor/preact.module.js"
+        }
+      }
+    </script>
+
+    <script type="module">
+      import { html, render } from "preact";
+      import init, {
+        engine_init,
+        engine_step,
+        game_state_ptr,
+        game_state_len,
+      } from "../dist/gamedev_wasm_hello.js";
+      import { createInputHandler } from "../input.js";
+      import App from "./app.js";
+
+      const PHASE_GAME_OVER = 1.0;
+      const WINNER_PLAYER_ONE = 1.0;
+      const SNAP = Object.freeze({
+        BALL_X: 0,
+        BALL_Y: 1,
+        BALL_VX: 2,
+        BALL_VY: 3,
+        PADDLE1_X: 4,
+        PADDLE1_Y: 5,
+        PADDLE2_X: 6,
+        PADDLE2_Y: 7,
+        P1_SCORE: 8,
+        P2_SCORE: 9,
+        FIELD_W: 10,
+        FIELD_H: 11,
+        GAME_PHASE: 12,
+        WINNER: 13,
+        BALL_VISIBLE: 14,
+        PADDLE_W: 15,
+        PADDLE_H: 16,
+      });
+
+      let lastTime = 0;
+      let wasmModule;
+
+      const keys = createInputHandler({
+        p1_up: ["w", "W", "ArrowUp"],
+        p1_down: ["s", "S", "ArrowDown"],
+        action: [" "],
+      });
+
+      async function run() {
+        try {
+          wasmModule = await init();
+          const canvas = document.getElementById("gameCanvas");
+          const ctx = canvas.getContext("2d");
+
+          engine_init("Pong", 800, 600);
+          render(html`<${App} />`, document.getElementById("tuningRoot"));
+
+          function gameLoop(currentTime) {
+            const currentTimeSec = currentTime / 1000.0;
+            const deltaTime = lastTime === 0 ? 0 : currentTimeSec - lastTime;
+            lastTime = currentTimeSec;
+
+            if (deltaTime > 0) {
+              const input_bits =
+                (keys.p1_up ? 0b001 : 0) |
+                (keys.p1_down ? 0b010 : 0) |
+                (keys.action ? 0b0001_0000 : 0);
+              engine_step(deltaTime, input_bits);
+            }
+
+            const statePtr = game_state_ptr();
+            const stateLen = game_state_len();
+            const state = new Float32Array(
+              wasmModule.memory.buffer,
+              statePtr,
+              stateLen,
+            );
+            const ball_x = state[SNAP.BALL_X];
+            const ball_y = state[SNAP.BALL_Y];
+            const ball_vx = state[SNAP.BALL_VX];
+            const ball_vy = state[SNAP.BALL_VY];
+            const paddle1_x = state[SNAP.PADDLE1_X];
+            const paddle1_y = state[SNAP.PADDLE1_Y];
+            const paddle2_x = state[SNAP.PADDLE2_X];
+            const paddle2_y = state[SNAP.PADDLE2_Y];
+            const p1_score = state[SNAP.P1_SCORE];
+            const p2_score = state[SNAP.P2_SCORE];
+            const game_phase = state[SNAP.GAME_PHASE];
+            const winner = state[SNAP.WINNER];
+            const ball_visible = state[SNAP.BALL_VISIBLE];
+            const paddle_width = state[SNAP.PADDLE_W];
+            const paddle_height = state[SNAP.PADDLE_H];
+
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = "#FFFFFF";
+            ctx.lineWidth = 4;
+            ctx.setLineDash([15, 15]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(
+              paddle1_x - paddle_width / 2,
+              paddle1_y - paddle_height / 2,
+              paddle_width,
+              paddle_height,
+            );
+            ctx.fillRect(
+              paddle2_x - paddle_width / 2,
+              paddle2_y - paddle_height / 2,
+              paddle_width,
+              paddle_height,
+            );
+
+            ctx.fillStyle = "#FFFFFF";
+            const ballSize = 12;
+            if (ball_visible) {
+              ctx.fillRect(
+                ball_x - ballSize / 2,
+                ball_y - ballSize / 2,
+                ballSize,
+                ballSize,
+              );
+            }
+
+            ctx.font = "48px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(String(p1_score), canvas.width / 4, 60);
+            ctx.fillText(String(p2_score), (canvas.width * 3) / 4, 60);
+
+            if (game_phase === PHASE_GAME_OVER) {
+              const winnerName =
+                winner === WINNER_PLAYER_ONE ? "PLAYER 1" : "PLAYER 2";
+              ctx.font = "36px monospace";
+              ctx.fillText(
+                winnerName + " WINS",
+                canvas.width / 2,
+                canvas.height / 2,
+              );
+              ctx.font = "20px monospace";
+              ctx.fillText(
+                "PRESS SPACE TO RESTART",
+                canvas.width / 2,
+                canvas.height / 2 + 40,
+              );
+            }
+
+            requestAnimationFrame(gameLoop);
+          }
+
+          requestAnimationFrame(gameLoop);
+        } catch (err) {
+          console.error("Error initializing WASM:", err);
+        }
+      }
+
+      run();
+    </script>
+  </body>
+</html>
