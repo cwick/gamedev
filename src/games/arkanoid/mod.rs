@@ -12,7 +12,7 @@ const PADDLE_HEIGHT: f32 = 16.0;
 const PADDLE_SPEED: f32 = 400.0;
 const BALL_RADIUS: f32 = 6.0;
 const BALL_SPEED: f32 = 420.0;
-const BOUNCE_ZONE_ANGLES: [f32; 8] = [15.0, 20.0, 30.0, 60.0, 60.0, 30.0, 20.0, 15.0];
+const BOUNCE_ZONE_ANGLES: [f32; 8] = [35.0, 45.0, 66.0, 66.0, 66.0, 66.0, 45.0, 35.0];
 
 const MIN_PADDLE_WIDTH: f32 = 20.0;
 const MIN_PADDLE_HEIGHT: f32 = 6.0;
@@ -227,7 +227,7 @@ fn apply_input(world: &mut World, dt: f32) {
 }
 
 fn clamp_paddle_to_field(world: &mut World, _dt: f32) {
-    let state = *world.resource::<ArkanoidState>();
+    let state = world.resource::<ArkanoidState>();
     let paddle_width = world.resource::<ArkanoidTuning>().paddle_width;
     let paddle = state.paddle;
     let field_width = world.field.width;
@@ -242,10 +242,11 @@ fn ball_paddle_collision(world: &mut World, _dt: f32) {
     let state = *world.resource::<ArkanoidState>();
     let tuning = *world.resource::<ArkanoidTuning>();
 
-    let paddle_transform = *world.transform(state.paddle);
-    let ball_transform = *world.transform(state.ball);
+    let paddle_transform = world.transform(state.paddle);
+    let ball_transform = world.transform(state.ball);
     let ball_velocity = world.velocity(state.ball);
 
+    // Already moving away from paddle
     if ball_velocity.y <= 0.0 {
         return;
     }
@@ -258,23 +259,31 @@ fn ball_paddle_collision(world: &mut World, _dt: f32) {
     let paddle_bottom = paddle_transform.y + paddle_half_height;
 
     let ball_bottom = ball_transform.y + tuning.ball_radius;
+    let ball_top = ball_transform.y - tuning.ball_radius;
+    let ball_right = ball_transform.x + tuning.ball_radius;
+    let ball_left = ball_transform.x - tuning.ball_radius;
 
-    if ball_bottom < paddle_top || ball_bottom > paddle_bottom {
-        return;
-    }
-
-    if ball_transform.x < paddle_left || ball_transform.x > paddle_right {
+    // Ball completely outside paddle
+    if ball_bottom < paddle_top
+        || ball_top > paddle_bottom
+        || ball_right < paddle_left
+        || ball_left > paddle_right
+    {
         return;
     }
 
     let relative_hit = (ball_transform.x - paddle_left) / tuning.paddle_width;
-    let zone_index = (relative_hit * 8.0).floor() as usize;
-    let zone_index = zone_index.clamp(0, 7);
+    let zone_index = (relative_hit * tuning.bounce_zone_angles.len() as f32).floor() as usize;
+    let zone_index = zone_index.clamp(0, tuning.bounce_zone_angles.len() - 1);
 
     let angle_from_horizontal = tuning.bounce_zone_angles[zone_index];
     let angle_rad = (90.0 - angle_from_horizontal).to_radians();
     let speed = ball_velocity.x.hypot(ball_velocity.y);
-    let direction = if zone_index < 4 { -1.0 } else { 1.0 };
+    let direction = if zone_index < tuning.bounce_zone_angles.len() / 2 {
+        -1.0
+    } else {
+        1.0
+    };
 
     let new_vx = direction * angle_rad.sin() * speed;
     let new_vy = -angle_rad.cos() * speed;

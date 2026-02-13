@@ -76,16 +76,15 @@
         BALL_SIZE: 6,
       });
 
-      const BOUNCE_ZONE_COLORS = Object.freeze([
-        "#ef4444",
-        "#f97316",
-        "#f59e0b",
-        "#eab308",
-        "#84cc16",
-        "#22c55e",
-        "#14b8a6",
-        "#06b6d4",
-      ]);
+      const BOUNCE_ZONE_COLORS = Object.freeze(
+        Array.from({ length: 8 }, (_, i) => {
+          const t = Math.abs(i - 3.5) / 3.5;
+          const r = Math.round(255 * t);
+          const g = 0;
+          const b = Math.round(255 * (1 - t));
+          return `rgb(${r}, ${g}, ${b})`;
+        }),
+      );
 
       let lastTime = 0;
       let mouseDeltaX = 0;
