@@ -1,366 +1,207 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Arkanoid</title>
+    <link rel="stylesheet" href="../styles.css" />
     <style>
-        :root {
-            --panel-bg: #111827;
-            --panel-border: #1f2937;
-            --panel-text: #d1d5db;
-            --panel-muted: #9ca3af;
-            --panel-accent: #10b981;
-            --canvas-bg: #000;
-        }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #030712;
+        padding-right: var(--debug-width);
+      }
 
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            background: #030712;
-            color: var(--panel-text);
-            font-family: Consolas, "Courier New", monospace;
-        }
+      .layout {
+        display: grid;
+        place-items: center;
+        padding: 16px;
+      }
 
-        .layout {
-            display: grid;
-            grid-template-columns: auto 320px;
-            gap: 16px;
-            align-items: start;
-            padding: 16px;
-        }
+      canvas {
+        display: block;
+        background: #000;
+        border: 1px solid #666;
+      }
 
-        canvas {
-            display: block;
-            background: var(--canvas-bg);
-            border: 1px solid var(--panel-border);
-        }
-
-        .panel {
-            background: var(--panel-bg);
-            border: 1px solid var(--panel-border);
-            padding: 12px;
-        }
-
-        .panel h2 {
-            margin: 0 0 12px;
-            font-size: 14px;
-            color: var(--panel-accent);
-        }
-
-        .group {
-            border-top: 1px solid var(--panel-border);
-            padding-top: 8px;
-            margin-top: 8px;
-        }
-
-        .row {
-            margin: 8px 0;
-        }
-
-        .row label {
-            display: block;
-            font-size: 12px;
-            color: var(--panel-muted);
-            margin-bottom: 4px;
-        }
-
-        .row input[type="range"],
-        .row input[type="number"] {
-            width: 100%;
-        }
-
-        .row .value {
-            font-size: 12px;
-            margin-top: 2px;
-        }
-
-        .hint {
-            margin-top: 8px;
-            font-size: 12px;
-            color: var(--panel-muted);
-        }
-
-        #lockHint {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #fff;
-            font-family: Consolas, "Courier New", monospace;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        @media (max-width: 1200px) {
-            .layout {
-                grid-template-columns: 1fr;
-            }
-        }
+      #lockHint {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #fff;
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 14px;
+        text-align: center;
+      }
     </style>
-</head>
 
-<body>
+    <script type="importmap">
+      {
+        "imports": {
+          "preact": "../vendor/preact.module.js"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
     <div id="lockHint">Click canvas to lock mouse</div>
     <div class="layout">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <aside class="panel" id="tuningPanel">
-            <h2>Arkanoid Tuning</h2>
-            <div id="schemaVersion" class="hint"></div>
-            <div class="group" id="controlsRoot"></div>
-            <button id="resetDefaults" type="button">Reset Defaults</button>
-            <p class="hint">All updates apply immediately and are not persisted.</p>
-        </aside>
+      <canvas id="gameCanvas" width="800" height="600"></canvas>
     </div>
+    <div id="tuningRoot"></div>
 
     <script type="module">
-        import init, {
-            engine_get_tuning_param,
-            engine_init,
-            engine_reset_tuning_defaults,
-            engine_set_tuning_param,
-            engine_step,
-            engine_tuning_schema_version,
-            game_state_len,
-            game_state_ptr,
-        } from '../dist/gamedev_wasm_hello.js';
-        import { createInputHandler } from '../input.js';
+      import { html, render } from "preact";
+      import init, {
+        engine_init,
+        engine_step,
+        game_state_len,
+        game_state_ptr,
+      } from "../dist/gamedev_wasm_hello.js";
+      import { createInputHandler } from "../input.js";
+      import App from "./app.js";
 
-        const SNAP = Object.freeze({
-            PADDLE_X: 0,
-            PADDLE_Y: 1,
-            PADDLE_WIDTH: 2,
-            PADDLE_HEIGHT: 3,
-            BALL_X: 4,
-            BALL_Y: 5,
-            BALL_SIZE: 6,
+      const SNAP = Object.freeze({
+        PADDLE_X: 0,
+        PADDLE_Y: 1,
+        PADDLE_WIDTH: 2,
+        PADDLE_HEIGHT: 3,
+        BALL_X: 4,
+        BALL_Y: 5,
+        BALL_SIZE: 6,
+      });
+
+      const BOUNCE_ZONE_COLORS = Object.freeze([
+        "#ef4444",
+        "#f97316",
+        "#f59e0b",
+        "#eab308",
+        "#84cc16",
+        "#22c55e",
+        "#14b8a6",
+        "#06b6d4",
+      ]);
+
+      let lastTime = 0;
+      let mouseDeltaX = 0;
+
+      const keys = createInputHandler({
+        left: ["ArrowLeft", "a", "A"],
+        right: ["ArrowRight", "d", "D"],
+      });
+
+      async function run() {
+        const wasmModule = await init();
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const lockHint = document.getElementById("lockHint");
+
+        canvas.addEventListener("click", async () => {
+          if (!document.pointerLockElement) {
+            await canvas.requestPointerLock();
+          }
         });
 
-        const PARAM = Object.freeze({
-            PADDLE_WIDTH: 0,
-            PADDLE_HEIGHT: 1,
-            PADDLE_SPEED: 2,
-            BALL_RADIUS: 3,
-            BALL_SPEED: 4,
-            BOUNCE_ZONE_0: 5,
-            BOUNCE_ZONE_1: 6,
-            BOUNCE_ZONE_2: 7,
-            BOUNCE_ZONE_3: 8,
-            BOUNCE_ZONE_4: 9,
-            BOUNCE_ZONE_5: 10,
-            BOUNCE_ZONE_6: 11,
-            BOUNCE_ZONE_7: 12,
+        document.addEventListener("mousemove", (e) => {
+          if (document.pointerLockElement === canvas) {
+            mouseDeltaX += e.movementX;
+          }
         });
 
-        const TUNING_STATUS_APPLIED = 0;
-        const BOUNCE_ZONE_COLORS = Object.freeze([
-            '#ef4444',
-            '#f97316',
-            '#f59e0b',
-            '#eab308',
-            '#84cc16',
-            '#22c55e',
-            '#14b8a6',
-            '#06b6d4',
-        ]);
-
-        let lastTime = 0;
-        let mouseDeltaX = 0;
-
-        const keys = createInputHandler({
-            left: ['ArrowLeft', 'a', 'A'],
-            right: ['ArrowRight', 'd', 'D'],
+        document.addEventListener("pointerlockchange", () => {
+          if (document.pointerLockElement === canvas) {
+            canvas.style.cursor = "none";
+            lockHint.style.display = "none";
+          } else {
+            canvas.style.cursor = "default";
+            lockHint.style.display = "block";
+            mouseDeltaX = 0;
+          }
         });
 
-        function setupControl(root, spec) {
-            const row = document.createElement('div');
-            row.className = 'row';
+        engine_init("Arkanoid", 800, 600);
+        render(html`<${App} />`, document.getElementById("tuningRoot"));
 
-            const label = document.createElement('label');
-            label.textContent = spec.label;
-            row.appendChild(label);
+        function gameLoop(currentTimeMs) {
+          const currentTimeSec = currentTimeMs / 1000.0;
+          const deltaTime = lastTime === 0 ? 0 : currentTimeSec - lastTime;
+          lastTime = currentTimeSec;
 
-            const range = document.createElement('input');
-            range.type = 'range';
-            range.min = String(spec.min);
-            range.max = String(spec.max);
-            range.step = String(spec.step);
-            row.appendChild(range);
+          if (deltaTime > 0.0) {
+            const clampedDelta = Math.max(
+              -256,
+              Math.min(256, Math.round(mouseDeltaX)),
+            );
+            const deltaEncoded = (clampedDelta & 0xffff) << 16;
 
-            const number = document.createElement('input');
-            number.type = 'number';
-            number.min = String(spec.min);
-            number.max = String(spec.max);
-            number.step = String(spec.step);
-            row.appendChild(number);
+            const input_bits =
+              (keys.left ? 0b0100 : 0) |
+              (keys.right ? 0b1000 : 0) |
+              deltaEncoded;
 
-            const valueEl = document.createElement('div');
-            valueEl.className = 'value';
-            row.appendChild(valueEl);
+            engine_step(deltaTime, input_bits);
+            mouseDeltaX = 0;
+          }
 
-            const syncFromEngine = () => {
-                const canonical = engine_get_tuning_param(spec.paramId);
-                if (Number.isFinite(canonical)) {
-                    range.value = String(canonical);
-                    number.value = String(canonical);
-                    valueEl.textContent = `Current: ${canonical.toFixed(spec.decimals ?? 2)}`;
-                }
-            };
+          const statePtr = game_state_ptr();
+          const stateLen = game_state_len();
+          if (statePtr !== 0 && stateLen >= SNAP.BALL_SIZE + 1) {
+            const snapshot = new Float32Array(
+              wasmModule.memory.buffer,
+              statePtr,
+              stateLen,
+            );
+            const paddleX = snapshot[SNAP.PADDLE_X];
+            const paddleY = snapshot[SNAP.PADDLE_Y];
+            const paddleWidth = snapshot[SNAP.PADDLE_WIDTH];
+            const paddleHeight = snapshot[SNAP.PADDLE_HEIGHT];
+            const ballX = snapshot[SNAP.BALL_X];
+            const ballY = snapshot[SNAP.BALL_Y];
+            const ballSize = snapshot[SNAP.BALL_SIZE];
 
-            const apply = (raw) => {
-                const parsed = Number(raw);
-                if (!Number.isFinite(parsed)) {
-                    syncFromEngine();
-                    return;
-                }
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                const status = engine_set_tuning_param(spec.paramId, parsed);
-                if (status !== TUNING_STATUS_APPLIED) {
-                    syncFromEngine();
-                    return;
-                }
-                syncFromEngine();
-            };
-
-            range.addEventListener('input', (event) => apply(event.target.value));
-            number.addEventListener('change', (event) => apply(event.target.value));
-
-            syncFromEngine();
-            root.appendChild(row);
-        }
-
-        function setupTuningPanel() {
-            document.getElementById('schemaVersion').textContent = `Schema version: ${engine_tuning_schema_version()}`;
-
-            const root = document.getElementById('controlsRoot');
-            const controls = [
-                { label: 'Paddle Width', paramId: PARAM.PADDLE_WIDTH, min: 20, max: 720, step: 1, decimals: 1 },
-                { label: 'Paddle Height', paramId: PARAM.PADDLE_HEIGHT, min: 6, max: 80, step: 1, decimals: 1 },
-                { label: 'Paddle Speed', paramId: PARAM.PADDLE_SPEED, min: 50, max: 1200, step: 1, decimals: 1 },
-                { label: 'Ball Radius', paramId: PARAM.BALL_RADIUS, min: 2, max: 30, step: 0.5, decimals: 2 },
-                { label: 'Ball Speed', paramId: PARAM.BALL_SPEED, min: 50, max: 2000, step: 1, decimals: 1 },
-                { label: 'Bounce Zone 0 Angle', paramId: PARAM.BOUNCE_ZONE_0, min: 5, max: 85, step: 1, decimals: 1 },
-                { label: 'Bounce Zone 1 Angle', paramId: PARAM.BOUNCE_ZONE_1, min: 5, max: 85, step: 1, decimals: 1 },
-                { label: 'Bounce Zone 2 Angle', paramId: PARAM.BOUNCE_ZONE_2, min: 5, max: 85, step: 1, decimals: 1 },
-                { label: 'Bounce Zone 3 Angle', paramId: PARAM.BOUNCE_ZONE_3, min: 5, max: 85, step: 1, decimals: 1 },
-                { label: 'Bounce Zone 4 Angle', paramId: PARAM.BOUNCE_ZONE_4, min: 5, max: 85, step: 1, decimals: 1 },
-                { label: 'Bounce Zone 5 Angle', paramId: PARAM.BOUNCE_ZONE_5, min: 5, max: 85, step: 1, decimals: 1 },
-                { label: 'Bounce Zone 6 Angle', paramId: PARAM.BOUNCE_ZONE_6, min: 5, max: 85, step: 1, decimals: 1 },
-                { label: 'Bounce Zone 7 Angle', paramId: PARAM.BOUNCE_ZONE_7, min: 5, max: 85, step: 1, decimals: 1 },
-            ];
-
-            controls.forEach((spec) => setupControl(root, spec));
-
-            document.getElementById('resetDefaults').addEventListener('click', () => {
-                engine_reset_tuning_defaults();
-                root.innerHTML = '';
-                controls.forEach((spec) => setupControl(root, spec));
-            });
-        }
-
-        async function run() {
-            const wasmModule = await init();
-            const canvas = document.getElementById('gameCanvas');
-            const ctx = canvas.getContext('2d');
-            const lockHint = document.getElementById('lockHint');
-
-            canvas.addEventListener('click', async () => {
-                if (!document.pointerLockElement) {
-                    await canvas.requestPointerLock();
-                }
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (document.pointerLockElement === canvas) {
-                    mouseDeltaX += e.movementX;
-                }
-            });
-
-            document.addEventListener('pointerlockchange', () => {
-                if (document.pointerLockElement === canvas) {
-                    canvas.style.cursor = 'none';
-                    lockHint.style.display = 'none';
-                } else {
-                    canvas.style.cursor = 'default';
-                    lockHint.style.display = 'block';
-                    mouseDeltaX = 0;
-                }
-            });
-
-            engine_init('Arkanoid', 800, 600);
-            setupTuningPanel();
-
-            function gameLoop(currentTimeMs) {
-                const currentTimeSec = currentTimeMs / 1000.0;
-                const deltaTime = lastTime === 0 ? 0 : currentTimeSec - lastTime;
-                lastTime = currentTimeSec;
-
-                if (deltaTime > 0.0) {
-                    const clampedDelta = Math.max(-256, Math.min(256, Math.round(mouseDeltaX)));
-                    const deltaEncoded = (clampedDelta & 0xFFFF) << 16;
-
-                    const input_bits =
-                        (keys.left ? 0b0100 : 0) |
-                        (keys.right ? 0b1000 : 0) |
-                        deltaEncoded;
-
-                    engine_step(deltaTime, input_bits);
-                    mouseDeltaX = 0;
-                }
-
-                const statePtr = game_state_ptr();
-                const stateLen = game_state_len();
-                if (statePtr !== 0 && stateLen >= SNAP.BALL_SIZE + 1) {
-                    const snapshot = new Float32Array(
-                        wasmModule.memory.buffer,
-                        statePtr,
-                        stateLen,
-                    );
-                    const paddleX = snapshot[SNAP.PADDLE_X];
-                    const paddleY = snapshot[SNAP.PADDLE_Y];
-                    const paddleWidth = snapshot[SNAP.PADDLE_WIDTH];
-                    const paddleHeight = snapshot[SNAP.PADDLE_HEIGHT];
-                    const ballX = snapshot[SNAP.BALL_X];
-                    const ballY = snapshot[SNAP.BALL_Y];
-                    const ballSize = snapshot[SNAP.BALL_SIZE];
-
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                    const paddleLeft = paddleX - paddleWidth / 2;
-                    const paddleTop = paddleY - paddleHeight / 2;
-                    const zoneWidth = paddleWidth / 8;
-                    for (let zoneIndex = 0; zoneIndex < 8; zoneIndex += 1) {
-                        const zoneLeft = paddleLeft + zoneIndex * zoneWidth;
-                        ctx.fillStyle = BOUNCE_ZONE_COLORS[zoneIndex];
-                        ctx.fillRect(zoneLeft, paddleTop, zoneWidth, paddleHeight);
-                    }
-
-                    ctx.strokeStyle = '#0b111f';
-                    ctx.lineWidth = 1;
-                    for (let divider = 1; divider < 8; divider += 1) {
-                        const x = paddleLeft + divider * zoneWidth;
-                        ctx.beginPath();
-                        ctx.moveTo(x, paddleTop);
-                        ctx.lineTo(x, paddleTop + paddleHeight);
-                        ctx.stroke();
-                    }
-
-                    ctx.fillStyle = '#ffff00';
-                    ctx.fillRect(ballX - ballSize / 2, ballY - ballSize / 2, ballSize, ballSize);
-                }
-
-                requestAnimationFrame(gameLoop);
+            const paddleLeft = paddleX - paddleWidth / 2;
+            const paddleTop = paddleY - paddleHeight / 2;
+            const zoneWidth = paddleWidth / 8;
+            for (let zoneIndex = 0; zoneIndex < 8; zoneIndex += 1) {
+              const zoneLeft = paddleLeft + zoneIndex * zoneWidth;
+              ctx.fillStyle = BOUNCE_ZONE_COLORS[zoneIndex];
+              ctx.fillRect(zoneLeft, paddleTop, zoneWidth, paddleHeight);
             }
 
-            requestAnimationFrame(gameLoop);
+            ctx.strokeStyle = "#0b111f";
+            ctx.lineWidth = 1;
+            for (let divider = 1; divider < 8; divider += 1) {
+              const x = paddleLeft + divider * zoneWidth;
+              ctx.beginPath();
+              ctx.moveTo(x, paddleTop);
+              ctx.lineTo(x, paddleTop + paddleHeight);
+              ctx.stroke();
+            }
+
+            ctx.fillStyle = "#ffff00";
+            ctx.fillRect(
+              ballX - ballSize / 2,
+              ballY - ballSize / 2,
+              ballSize,
+              ballSize,
+            );
+          }
+
+          requestAnimationFrame(gameLoop);
         }
 
-        run();
-    </script>
-</body>
+        requestAnimationFrame(gameLoop);
+      }
 
+      run();
+    </script>
+  </body>
 </html>
