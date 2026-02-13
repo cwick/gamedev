@@ -8,6 +8,7 @@ const TuningControl = ({
   const [, setTrigger] = useState(0);
 
   const currentValue = engine_get_tuning_param(spec.paramId);
+  const isReadOnly = spec.readOnly;
 
   const handleRangeChange = (e) => {
     const parsed = Number(e.target.value);
@@ -30,20 +31,23 @@ const TuningControl = ({
     : "N/A";
 
   return html`
-    <div style="margin-bottom: 12px;">
+    <div class="debug__control">
       <div class="debug__row">
         <span class="debug__label">${spec.label}</span>
         <span class="debug__value">${displayValue}</span>
       </div>
-      <input
-        type="range"
-        min=${spec.min}
-        max=${spec.max}
-        step=${spec.step}
-        value=${currentValue}
-        onInput=${handleRangeChange}
-        style="width: 100%; margin-top: 4px;"
-      />
+      ${!isReadOnly &&
+      html`
+        <input
+          type="range"
+          min=${spec.min}
+          max=${spec.max}
+          step=${spec.step}
+          value=${currentValue}
+          onInput=${handleRangeChange}
+          class="debug__slider"
+        />
+      `}
     </div>
   `;
 };
@@ -86,11 +90,7 @@ const TuningPanel = ({
       </div>
 
       <div class="debug__section">
-        <button
-          onClick=${handleReset}
-          type="button"
-          style="width: 100%; padding: 6px; background: var(--debug-border); border: none; color: var(--debug-text); cursor: pointer; font-family: var(--font-mono);"
-        >
+        <button onClick=${handleReset} type="button" class="debug__button">
           Reset Defaults
         </button>
       </div>

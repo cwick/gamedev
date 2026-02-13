@@ -37,6 +37,27 @@ impl SnapshotField {
     }
 }
 
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PongTuningParam {
+    BallX = 0,
+    BallY = 1,
+}
+
+impl TryFrom<u32> for PongTuningParam {
+    type Error = ();
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::BallX),
+            1 => Ok(Self::BallY),
+            _ => Err(()),
+        }
+    }
+}
+
+const PONG_TUNING_SCHEMA_VERSION: u32 = 1;
+
 const PADDLE_SPEED: f32 = 300.0;
 const AI_DEAD_ZONE: f32 = 10.0;
 const WINNING_SCORE: u32 = 11;
@@ -350,6 +371,17 @@ fn tick_serve(world: &mut World, dt: f32) {
     }
 }
 
+fn get_tuning_param(world: &World, param_id: u32) -> Option<f32> {
+    let param = PongTuningParam::try_from(param_id).ok()?;
+    let pong = world.resource::<PongState>();
+    let ball_transform = world.transform(pong.ball);
+    let value = match param {
+        PongTuningParam::BallX => ball_transform.x,
+        PongTuningParam::BallY => ball_transform.y,
+    };
+    Some(value)
+}
+
 pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot, TuningApi) {
     let mut world = World::new(width, height);
 
@@ -413,11 +445,22 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot, Tunin
         .with_system_in_phase(SystemPhase::Resolve, resolve_scoring)
         .with_system_in_phase(SystemPhase::Resolve, tick_serve);
 
+    fn set_tuning_param(_world: &mut World, _param_id: u32, _value: f32) -> u32 {
+        crate::engine::TUNING_STATUS_REJECTED
+    }
+
+    fn reset_tuning_defaults(_world: &mut World) {}
+
     (
         world,
         schedule,
         Snapshot::new(write_snapshot, vec![0.0; SnapshotField::Count as usize]),
-        TuningApi::unsupported(),
+        TuningApi::new(
+            set_tuning_param,
+            get_tuning_param,
+            reset_tuning_defaults,
+            PONG_TUNING_SCHEMA_VERSION,
+        ),
     )
 }
 
