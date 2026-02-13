@@ -70,7 +70,7 @@ impl TryFrom<u32> for ArkanoidTuningParam {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 struct ArkanoidTuning {
     paddle_width: f32,
     paddle_height: f32,
@@ -93,7 +93,6 @@ impl Default for ArkanoidTuning {
     }
 }
 
-#[derive(Clone, Copy)]
 struct ArkanoidState {
     paddle: EntityId,
     ball: EntityId,
@@ -122,13 +121,16 @@ fn launch_velocity(speed: f32) -> Velocity {
 }
 
 fn apply_tuning(world: &mut World) {
-    let state = *world.resource::<ArkanoidState>();
-    let tuning = *world.resource::<ArkanoidTuning>();
+    let ball = world.resource::<ArkanoidState>().ball;
+    let paddle = world.resource::<ArkanoidState>().paddle;
+    let tuning = world.resource::<ArkanoidTuning>();
+    let ball_radius = tuning.ball_radius;
+    let ball_speed = tuning.ball_speed;
     let paddle_y = world.field.height - tuning.paddle_height * 1.5;
 
-    world.collider_mut(state.ball).radius = tuning.ball_radius;
-    world.transform_mut(state.paddle).y = paddle_y;
-    apply_ball_speed(world, state.ball, tuning.ball_speed);
+    world.collider_mut(ball).radius = ball_radius;
+    world.transform_mut(paddle).y = paddle_y;
+    apply_ball_speed(world, ball, ball_speed);
 }
 
 fn apply_ball_speed(world: &mut World, ball: EntityId, target_speed: f32) {
@@ -153,7 +155,7 @@ fn set_tuning_param(world: &mut World, param_id: u32, value: f32) -> u32 {
     };
 
     let field_width = world.field.width;
-    let mut tuning = *world.resource::<ArkanoidTuning>();
+    let tuning = world.resource_mut::<ArkanoidTuning>();
     match param {
         ArkanoidTuningParam::PaddleWidth => {
             let max_width = field_width * PADDLE_WIDTH_MAX_RATIO;
@@ -178,7 +180,6 @@ fn set_tuning_param(world: &mut World, param_id: u32, value: f32) -> u32 {
         }
     }
 
-    *world.resource_mut::<ArkanoidTuning>() = tuning;
     apply_tuning(world);
 
     TUNING_STATUS_APPLIED
@@ -186,7 +187,7 @@ fn set_tuning_param(world: &mut World, param_id: u32, value: f32) -> u32 {
 
 fn get_tuning_param(world: &World, param_id: u32) -> Option<f32> {
     let param = ArkanoidTuningParam::try_from(param_id).ok()?;
-    let tuning = *world.resource::<ArkanoidTuning>();
+    let tuning = world.resource::<ArkanoidTuning>();
     let value = match param {
         ArkanoidTuningParam::PaddleWidth => tuning.paddle_width,
         ArkanoidTuningParam::PaddleHeight => tuning.paddle_height,
@@ -208,7 +209,7 @@ fn reset_tuning_defaults(world: &mut World) {
 }
 
 fn apply_input(world: &mut World, dt: f32) {
-    let state = *world.resource::<ArkanoidState>();
+    let paddle = world.resource::<ArkanoidState>().paddle;
     let paddle_speed = world.resource::<ArkanoidTuning>().paddle_speed;
 
     let input_bits = world.input.bits;
@@ -217,12 +218,12 @@ fn apply_input(world: &mut World, dt: f32) {
 
     if mouse_delta.abs() > 0.1 {
         const MOUSE_SENSITIVITY: f32 = 1.5;
-        world.transform_mut(state.paddle).x += mouse_delta * MOUSE_SENSITIVITY;
+        world.transform_mut(paddle).x += mouse_delta * MOUSE_SENSITIVITY;
     } else {
         let left = (input_bits & INPUT_LEFT) != 0;
         let right = (input_bits & INPUT_RIGHT) != 0;
         let dir = (right as i32) - (left as i32);
-        world.transform_mut(state.paddle).x += dir as f32 * paddle_speed * dt;
+        world.transform_mut(paddle).x += dir as f32 * paddle_speed * dt;
     }
 }
 
@@ -239,12 +240,12 @@ fn clamp_paddle_to_field(world: &mut World, _dt: f32) {
 }
 
 fn ball_paddle_collision(world: &mut World, _dt: f32) {
-    let state = *world.resource::<ArkanoidState>();
-    let tuning = *world.resource::<ArkanoidTuning>();
-
-    let paddle_transform = world.transform(state.paddle);
-    let ball_transform = world.transform(state.ball);
-    let ball_velocity = world.velocity(state.ball);
+    let ball = world.resource::<ArkanoidState>().ball;
+    let paddle = world.resource::<ArkanoidState>().paddle;
+    let tuning = world.resource::<ArkanoidTuning>();
+    let paddle_transform = world.transform(paddle);
+    let ball_transform = world.transform(ball);
+    let ball_velocity = world.velocity(ball);
 
     // Already moving away from paddle
     if ball_velocity.y <= 0.0 {
@@ -287,13 +288,14 @@ fn ball_paddle_collision(world: &mut World, _dt: f32) {
 
     let new_vx = direction * angle_rad.sin() * speed;
     let new_vy = -angle_rad.cos() * speed;
+    let ball_radius = tuning.ball_radius;
 
-    let ball_velocity_mut = world.velocity_mut(state.ball);
+    let ball_velocity_mut = world.velocity_mut(ball);
     ball_velocity_mut.x = new_vx;
     ball_velocity_mut.y = new_vy;
 
-    let ball_transform_mut = world.transform_mut(state.ball);
-    ball_transform_mut.y = paddle_top - tuning.ball_radius;
+    let ball_transform_mut = world.transform_mut(ball);
+    ball_transform_mut.y = paddle_top - ball_radius;
 }
 
 pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot, TuningApi) {
@@ -343,8 +345,10 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot, Tunin
 fn write_snapshot(world: &World, snapshot: &mut [f32]) {
     use SnapshotField::*;
 
-    let &ArkanoidState { paddle, ball } = world.resource::<ArkanoidState>();
-    let tuning = *world.resource::<ArkanoidTuning>();
+    let state = world.resource::<ArkanoidState>();
+    let paddle = state.paddle;
+    let ball = state.ball;
+    let tuning = world.resource::<ArkanoidTuning>();
 
     let paddle_transform = world.transform(paddle);
     snapshot[PaddleX.idx()] = paddle_transform.x;
