@@ -42,6 +42,8 @@ impl SnapshotField {
 enum PongTuningParam {
     BallX = 0,
     BallY = 1,
+    BallVx = 2,
+    BallVy = 3,
 }
 
 impl TryFrom<u32> for PongTuningParam {
@@ -51,6 +53,8 @@ impl TryFrom<u32> for PongTuningParam {
         match value {
             0 => Ok(Self::BallX),
             1 => Ok(Self::BallY),
+            2 => Ok(Self::BallVx),
+            3 => Ok(Self::BallVy),
             _ => Err(()),
         }
     }
@@ -372,10 +376,14 @@ fn tick_serve(world: &mut World, dt: f32) {
 fn get_tuning_param(world: &World, param_id: u32) -> Option<f32> {
     let param = PongTuningParam::try_from(param_id).ok()?;
     let pong = world.resource::<PongState>();
-    let ball_transform = world.transform(pong.ball);
+    let ball = pong.ball;
+    let ball_transform = world.transform(ball);
+    let ball_velocity = world.velocity(ball);
     let value = match param {
         PongTuningParam::BallX => ball_transform.x,
         PongTuningParam::BallY => ball_transform.y,
+        PongTuningParam::BallVx => ball_velocity.x,
+        PongTuningParam::BallVy => ball_velocity.y,
     };
     Some(value)
 }

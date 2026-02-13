@@ -37,7 +37,6 @@ const TuningControl = ({ spec, currentValue, onValueChange }) => {
 };
 
 const TuningPanel = ({
-  title,
   controls,
   engine_get_tuning_param,
   engine_set_tuning_param,
@@ -63,10 +62,6 @@ const TuningPanel = ({
 
   return html`
     <div class="debug">
-      <div class="debug__section">
-        <h3 class="debug__title">${title}</h3>
-      </div>
-
       <div class="debug__section">
         ${controls.map(
           (spec) => html`
