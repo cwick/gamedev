@@ -46,7 +46,6 @@ const TuningControl = ({
 
 const TuningPanel = ({
   title,
-  schemaVersion,
   controls,
   engine_get_tuning_param,
   engine_set_tuning_param,
@@ -63,10 +62,6 @@ const TuningPanel = ({
     <div class="debug">
       <div class="debug__section">
         <h3 class="debug__title">${title}</h3>
-        <div class="debug__row">
-          <span class="debug__label">Schema</span>
-          <span class="debug__value">${schemaVersion}</span>
-        </div>
       </div>
 
       <div class="debug__section">

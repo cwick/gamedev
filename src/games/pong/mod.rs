@@ -56,8 +56,6 @@ impl TryFrom<u32> for PongTuningParam {
     }
 }
 
-const PONG_TUNING_SCHEMA_VERSION: u32 = 1;
-
 const PADDLE_SPEED: f32 = 300.0;
 const AI_DEAD_ZONE: f32 = 10.0;
 const WINNING_SCORE: u32 = 11;
@@ -455,12 +453,7 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot, Tunin
         world,
         schedule,
         Snapshot::new(write_snapshot, vec![0.0; SnapshotField::Count as usize]),
-        TuningApi::new(
-            set_tuning_param,
-            get_tuning_param,
-            reset_tuning_defaults,
-            PONG_TUNING_SCHEMA_VERSION,
-        ),
+        TuningApi::new(set_tuning_param, get_tuning_param, reset_tuning_defaults),
     )
 }
 

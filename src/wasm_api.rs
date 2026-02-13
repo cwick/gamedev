@@ -77,14 +77,3 @@ pub fn engine_reset_tuning_defaults() {
         }
     });
 }
-
-#[wasm_bindgen]
-pub fn engine_tuning_schema_version() -> u32 {
-    ENGINE.with(|engine| {
-        engine
-            .borrow()
-            .as_ref()
-            .map(|engine| engine.tuning_schema_version())
-            .unwrap_or(0)
-    })
-}

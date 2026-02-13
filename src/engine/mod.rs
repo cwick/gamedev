@@ -40,7 +40,6 @@ pub struct TuningApi {
     set: TuningSetFn,
     get: TuningGetFn,
     reset: TuningResetFn,
-    schema_version: u32,
 }
 
 impl TuningApi {
@@ -59,22 +58,11 @@ impl TuningApi {
             set: set_unsupported,
             get: get_unsupported,
             reset: reset_unsupported,
-            schema_version: 0,
         }
     }
 
-    pub fn new(
-        set: TuningSetFn,
-        get: TuningGetFn,
-        reset: TuningResetFn,
-        schema_version: u32,
-    ) -> Self {
-        Self {
-            set,
-            get,
-            reset,
-            schema_version,
-        }
+    pub fn new(set: TuningSetFn, get: TuningGetFn, reset: TuningResetFn) -> Self {
+        Self { set, get, reset }
     }
 }
 
@@ -153,9 +141,5 @@ impl Engine {
 
     pub fn reset_tuning_defaults(&mut self) {
         (self.tuning_api.reset)(&mut self.world);
-    }
-
-    pub fn tuning_schema_version(&self) -> u32 {
-        self.tuning_api.schema_version
     }
 }

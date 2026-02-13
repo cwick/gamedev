@@ -26,7 +26,6 @@ const MAX_BALL_SPEED: f32 = 2000.0;
 const MIN_ZONE_ANGLE: f32 = 5.0;
 const MAX_ZONE_ANGLE: f32 = 85.0;
 const PADDLE_WIDTH_MAX_RATIO: f32 = 0.9;
-const ARKANOID_TUNING_SCHEMA_VERSION: u32 = 1;
 
 const SNAPSHOT_LEN: usize = SnapshotField::Count as usize;
 
@@ -328,12 +327,7 @@ pub fn build_world(width: f32, height: f32) -> (World, Schedule, Snapshot, Tunin
         world,
         schedule,
         Snapshot::new(write_snapshot, vec![0.0; SNAPSHOT_LEN]),
-        TuningApi::new(
-            set_tuning_param,
-            get_tuning_param,
-            reset_tuning_defaults,
-            ARKANOID_TUNING_SCHEMA_VERSION,
-        ),
+        TuningApi::new(set_tuning_param, get_tuning_param, reset_tuning_defaults),
     )
 }
 
