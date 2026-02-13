@@ -15,10 +15,11 @@ src/engine/                 → ECS engine (components, systems, world, schedule
 src/games/                  → game definitions (registry, per-game modules)
 src/games/pong/             → Pong game logic and resources
 src/games/arkanoid/         → Arkanoid game logic
-web/index.html              → Pong: canvas rendering, input handling, game loop
-web/arkanoid/index.html     → Arkanoid: canvas rendering, input handling, game loop
-web/app.js                  → game launcher / shared app shell
-web/input.js                → shared input handling
+web/index.html              → game launcher / app shell
+web/games/pong/             → Pong canvas rendering, input handling, game loop
+web/games/arkanoid/         → Arkanoid canvas rendering, input handling, game loop
+web/shared/                 → shared input handling and UI components
+web/vendor/                 → third-party libraries
 ```
 
 **Data flow is strictly one-way: JS calls Rust, never the reverse.** Rust does NOT import or call any JS functions. Game state is communicated via a `[f32; 12]` snapshot array that JS reads as a `Float32Array`.
